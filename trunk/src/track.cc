@@ -464,3 +464,203 @@ void track::MorphoMath::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
 		mirage::morph::Format<ImageBool, ImageBool, 0>::Opening(src, element,
 				res);
 }
+
+/*-----------------------------------------------------------------------------------------*/
+/* get contour from the foreground image                                                   */
+/*-----------------------------------------------------------------------------------------*/
+void track::Contour::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
+	ImageBool::pixel_type pix1, pix2, pix_end;
+	ImageBool::point_type pos, dimension, offset;
+
+	for (pix1 = inFrame->begin(), pix_end = inFrame->end(), pix2
+			= outFrame->begin(); pix1 != pix_end; ++pix1, ++pix2) {
+		if (*pix1) {
+			pos = !pix2 + offset(1, 0);
+			*pix2 = !(src(pos));
+
+			if (!(*pix2)) {
+				pos = !pix2 + offset(0, 1);
+				*pix2 = !((*inFrame)(pos));
+
+				if (!(*pix2)) {
+
+					pos = !pix2 + offset(0, -1);
+					*pix2 = !((*inFrame)(pos));
+
+					if (!(*pix2)) {
+						pos = !pix2 + offset(-1, 0);
+						*pix2 = !((*outFrame)(pos));
+					}
+				}
+			}
+		} else
+			*pix2 = false;
+	}
+}
+
+/*-----------------------------------------------------------------------------------------*/
+/* apply gngt on the contour                                                               */
+/*-----------------------------------------------------------------------------------------*/
+void track::GNGT::feedGNGT(ImageBool& contour) {
+	ImageBool::pixel_type pix, pix_end;
+	std::vector<Input>::iterator iter, iter_end;
+	Input example;
+	int epoch;
+
+	// Getting examples
+	examples.clear();
+	for (pix = contour.begin(), pix_end = contour.end(); pix != pix_end; ++pix)
+		if (*pix) {
+			example[0] = (!pix)[0];
+			example[1] = (!pix)[1];
+			examples.push_back(example);
+		}
+
+	for (epoch = 0; epoch < param_nb_epochs_per_frame; ++epoch) {
+		iter_end = examples.end();
+		iter = examples.begin();
+		std::random_shuffle(iter, iter_end);
+
+		algo.OpenEpoch(true);
+		for (; iter != iter_end; ++iter)
+			algo.Submit(*iter);
+		algo.CloseEpoch();
+	}
+
+	iter_end = examples.end();
+	iter = examples.begin();
+	std::random_shuffle(iter, iter_end);
+	algo.OpenEpoch(false);
+	for (; iter != iter_end; ++iter)
+		algo.Submit(*iter);
+	algo.CloseEpoch();
+}
+
+void track::GNGT::labelize(LABELIZER& labelizer) {
+	GNG_T::Edges::iterator edge_iter, edge_end;
+	GNG_T::Nodes::iterator node_iter, node_end;
+	GNG_T::Node *n;
+	GNG_T::Edge *e;
+	double length_max;
+
+	length_max = param_gngt_length_max * param_gngt_length_max;
+
+	for (edge_iter = algo.edges.begin(), edge_end = algo.edges.end(); edge_iter
+			!= edge_end; ++edge_iter) {
+		e = *edge_iter;
+		labelizer.SetValidity(e, Input::d2(e->n1->value.w, e->n2->value.w)
+				< length_max);
+	}
+
+	for (node_iter = algo.nodes.begin(), node_end = algo.nodes.end(); node_iter
+			!= node_end; ++node_iter) {
+		n = *node_iter;
+		labelizer.SetValidity(n, n->value.e / n->value.n
+				< param_gngt_variance_max);
+	}
+	labelizer.Process(algo);
+}
+
+/*-----------------------------------------------------------------------------------------*/
+/* draw the graph over the original image                                                  */
+/*-----------------------------------------------------------------------------------------*/
+mirage::colorspace::RGB_24 track::Draw::getRandomColor() {
+	mirage::colorspace::RGB_24 res;
+
+	res._red = (mirage::colorspace::RGB_24::value_type) (256.0 * (rand()
+			/ (RAND_MAX + 1.0)));
+	res._green = (mirage::colorspace::RGB_24::value_type) (256.0 * (rand()
+			/ (RAND_MAX + 1.0)));
+	res._blue = (mirage::colorspace::RGB_24::value_type) (256.0 * (rand()
+			/ (RAND_MAX + 1.0)));
+
+	return res;
+}
+
+/* initialize colors */
+track::Draw::Draw() {
+	pen[0] = pen[1] = param_pen_thickness;
+	half_pen = pen / 2;
+
+	colors[0]._red = 255;
+	colors[0]._green = 95;
+	colors[0]._blue = 95;
+
+	colors[1]._red = 0;
+	colors[1]._green = 0;
+	colors[1]._blue = 255;
+
+	colors[2]._red = 0;
+	colors[2]._green = 255;
+	colors[2]._blue = 0;
+
+	colors[3]._red = 0;
+	colors[3]._green = 255;
+	colors[3]._blue = 255;
+
+	colors[4]._red = 190;
+	colors[4]._green = 190;
+	colors[4]._blue = 255;
+
+	colors[5]._red = 255;
+	colors[5]._green = 0;
+	colors[5]._blue = 255;
+
+	colors[6]._red = 255;
+	colors[6]._green = 190;
+	colors[6]._blue = 0;
+
+	colors[7]._red = 190;
+	colors[7]._green = 255;
+	colors[7]._blue = 0;
+
+	colors[8]._red = 255;
+	colors[8]._green = 190;
+	colors[8]._blue = 190;
+}
+
+void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRGB24& source) {
+	vq::Labelizer<GNG_T>::Labeling::iterator label_iter, label_end;
+	vq::Labelizer<GNG_T>::ConnectedComponent* component;
+	vq::Labelizer<GNG_T>::ConnectedComponent::Edges::iterator edge_iter,
+			edge_end;
+	int label;
+	mirage::img::Line<ImageRGB24> line;
+	mirage::img::Line<ImageRGB24>::pixel_type lpix, lpix_end;
+	mirage::SubFrame<ImageRGB24> dot(result, pen, pen);
+	mirage::img::Coordinate A, B;
+	GNG_T::Node *n1, *n2;
+	mirage::colorspace::RGB_24 paint;
+
+	mirage::algo::UnaryOp<mirage::SubFrame<ImageRGB24>, ImageRGB24,
+			mirage::algo::Affectation<mirage::SubFrame<ImageRGB24>::value_type,
+					ImageRGB24::value_type> >(source, *result);
+
+	line << (*result);
+	for (label_iter = labelizer->labeling.begin(), label_end
+			= labelizer->labeling.end(); label_iter != label_end; ++label_iter) {
+
+		label = label_iter->first;
+		component = label_iter->second;
+
+		if (colors.count(label) == 0)
+			colors[label] = RandomColor();
+		paint = colors[label];
+
+		for (edge_iter = component->edges.begin(), edge_end
+				= component->edges.end(); edge_iter != edge_end; ++edge_iter) {
+			n1 = (*edge_iter)->n1;
+			n2 = (*edge_iter)->n2;
+			A((int) (n1->value.w[0] + .5), (int) (n1->value.w[1] + .5));
+			B((int) (n2->value.w[0] + .5), (int) (n2->value.w[1] + .5));
+			if ((A[0] != B[0]) || (A[1] != B[1])) {
+				line(A, B, false, false);
+				for (lpix = line.begin(), lpix_end = line.end(); lpix
+						!= lpix_end; ++lpix) {
+					dot.resize(!lpix - half_pen, pen);
+					dot = paint;
+				}
+			}
+		}
+	}
+}
