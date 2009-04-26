@@ -86,7 +86,8 @@ namespace track {
 			}
 	};
 
-	typedef gngt::Network<ParamGNG_T> GNGTGraph;
+	typedef gngt::Network<ParamGNG_T> GNG_T;
+	typedef vq::Labelizer<GNG_T> LABELIZER;
 
 	/*-----------------------------------------------------------------------------------------*/
 	/* retrieve images from bkbd server _ manages server connection                            */
@@ -97,17 +98,17 @@ namespace track {
 		private:
 			bkbd::Repository<bkbd::JPEG>::Client* jpgClientIn;
 			bkbd::Repository<bkbd::JPEG>::Client* jpgClientOut;
-			bkbd::Repository<bkbd::JPEG>::Client* jpgClientDetection = NULL;
-			bkbd::Repository<bkbd::Image>::Client* rawClientIn = NULL;
-			bkbd::Repository<bkbd::Image>::Client* rawClientOut = NULL;
-			bkbd::Repository<bkbd::Image>::Client* rawClientDetection = NULL;
+			bkbd::Repository<bkbd::JPEG>::Client* jpgClientDetection;
+			bkbd::Repository<bkbd::Image>::Client* rawClientIn;
+			bkbd::Repository<bkbd::Image>::Client* rawClientOut;
+			bkbd::Repository<bkbd::Image>::Client* rawClientDetection;
 		public:
 			ServerConnection();
 			virtual ~ServerConnection();
 			/* retrieve an image from the input entity */
 			void getImage(bkbd::Image* frame);
 			/* post outFrame to the output entity */
-			void postImg(const ImageRGB24& outFrame);
+			void postImg(ImageRGB24& outFrame);
 	};
 
 	ServerConnection* serverConn;
@@ -116,11 +117,14 @@ namespace track {
 	/* loads parameters form file or default parameters                                        */
 	/*-----------------------------------------------------------------------------------------*/
 	class ParameterParser {
+		private:
+#define Mode(jpg)((jpg)?"jpeg":"rgb24")
+			void loadDefaultParameters();
 		public:
-			/* load parameters from file */
-			ParameterParser(const std::string& confFile);
 			/* default parameters */
 			ParameterParser();
+			/* load parameters from file */
+			ParameterParser(const std::string& confFile);
 			void saveParameters(const std::string& filename);
 	};
 
@@ -162,7 +166,34 @@ namespace track {
 	/*-----------------------------------------------------------------------------------------*/
 	class ForeGround {
 		private:
-			ForegroundDetection algo;
+			class DetectionParams {
+				public:
+					inline static int stdMin(void) {
+						return 3;
+					}
+					inline static int stdMax(void) {
+						return 20;
+					}
+					inline static double k(void) {
+						return 2.5;
+					}
+					inline static double shadowRatio(void) {
+						return 0.55;
+					}
+					inline static double shadowVar(void) {
+						return 0.075;
+					}
+					inline static int shadowWindow(void) {
+						return 1;
+					}
+					inline static int morphEro(void) {
+						return 1;
+					}
+					inline static int morphDil(void) {
+						return 2;
+					}
+			};
+			mirage::img::ForegroundDetection<DetectionParams, 0> algo;
 			bool firstImg;
 		public:
 			ForeGround() {
@@ -175,6 +206,10 @@ namespace track {
 	/* various transformations on the image                                                    */
 	/*-----------------------------------------------------------------------------------------*/
 	class MorphoMath {
+		private:
+			typedef mirage::img::Coding<mirage::morph::MaskValue>::Frame
+					Element;
+			Element element;
 		public:
 			void operator()(ImageBool* inFrame, ImageBool*& outFrame);
 	};
@@ -184,17 +219,7 @@ namespace track {
 	/*-----------------------------------------------------------------------------------------*/
 	class Contour {
 		public:
-			Contour() {
-				//TODO
-			}
-
-			virtual ~Contour() {
-				//TODO
-			}
-
-			void operator()(ImageBool* inFrame, ImageBool*& outFrame) {
-				//TODO
-			}
+			void operator()(ImageBool* inFrame, ImageBool*& outFrame);
 
 	};
 
@@ -202,17 +227,16 @@ namespace track {
 	/* applies gngt on the contour retrieved by the contour detection class                    */
 	/*-----------------------------------------------------------------------------------------*/
 	class GNGT {
+		private:
+			GNG_T algo;
+			std::vector<Input> examples;
+
+			void feedGNGT(ImageBool& contour);
+			void labelize(LABELIZER& labelizer);
 		public:
-			GNGT() {
-				//TODO
-			}
-
-			virtual ~GNGT() {
-				//TODO
-			}
-
-			void operator()(ImageBool* inFrame, GNGTGraph*& outFrame) {
-				//TODO
+			void operator()(ImageBool* contour, LABELIZER*& labelizer) {
+				feedGNGT(*contour);
+				labelize(*labelizer);
 			}
 
 	};
@@ -221,19 +245,15 @@ namespace track {
 	/* draws the graph over the image received from the conversion stage                       */
 	/*-----------------------------------------------------------------------------------------*/
 	class Draw {
+		private:
+			std::map<int, mirage::colorspace::RGB_24> colors;
+			ImageRGB24::point_type pen, half_pen;
+
+			mirage::colorspace::RGB_24 getRandomColor();
 		public:
-			Draw() {
-				//TODO
-			}
-
-			virtual ~Draw() {
-				//TODO
-			}
-
-			void operator()(GNGTGraph* inFrame, ImageRGB24*& outFrame,
-					ImageRGB24& fromQueue) {
-				//TODO generate RGB image from frontBuffer and first image in queue
-			}
+			Draw();
+			void operator()(LABELIZER* inFrame, ImageRGB24*& outFrame,
+					ImageRGB24& fromQueue);
 	};
 
 }
