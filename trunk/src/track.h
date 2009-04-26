@@ -20,44 +20,44 @@
 
 namespace track {
 
-	int param_inter_frame_delay;
-	std::string param_buffer_in_hostname;
-	std::string param_buffer_in_resource;
-	std::string param_buffer_in_entity;
-	int param_buffer_in_port;
-	bool param_buffer_in_jpg;
-	std::string param_buffer_out_hostname;
-	std::string param_buffer_out_resource;
-	std::string param_buffer_out_entity;
-	int param_buffer_out_port;
-	bool param_buffer_out_jpg;
-	int param_out_jpeg_quality;
-	std::string param_buffer_detection_hostname;
-	std::string param_buffer_detection_resource;
-	std::string param_buffer_detection_entity;
-	int param_buffer_detection_port;
-	bool param_buffer_detection_jpg;
-	int param_detection_jpeg_quality;
-	bool param_display_detection;
-	double param_color_min_norm2;
-	double param_color_min_norm2_margin;
-	double param_color_min_cosine;
-	int param_nb_background_samples;
-	double param_background_coef;
-	double param_gngt_target;
-	double param_gngt_first_learning_rate;
-	double param_gngt_second_learning_rate;
-	int param_gngt_edge_age_max;
-	double param_gngt_variance_max;
-	double param_gngt_length_max;
-	int param_nb_epochs_per_frame;
-	int param_pen_thickness;
-	int param_left_margin;
-	int param_right_margin;
-	int param_top_margin;
-	int param_bottom_margin;
-	bool param_morph;
-	int param_morph_radius;
+	extern int param_inter_frame_delay;
+	extern std::string param_buffer_in_hostname;
+	extern std::string param_buffer_in_resource;
+	extern std::string param_buffer_in_entity;
+	extern int param_buffer_in_port;
+	extern bool param_buffer_in_jpg;
+	extern std::string param_buffer_out_hostname;
+	extern std::string param_buffer_out_resource;
+	extern std::string param_buffer_out_entity;
+	extern int param_buffer_out_port;
+	extern bool param_buffer_out_jpg;
+	extern int param_out_jpeg_quality;
+	extern std::string param_buffer_detection_hostname;
+	extern std::string param_buffer_detection_resource;
+	extern std::string param_buffer_detection_entity;
+	extern int param_buffer_detection_port;
+	extern bool param_buffer_detection_jpg;
+	extern int param_detection_jpeg_quality;
+	extern bool param_display_detection;
+	extern double param_color_min_norm2;
+	extern double param_color_min_norm2_margin;
+	extern double param_color_min_cosine;
+	extern int param_nb_background_samples;
+	extern double param_background_coef;
+	extern double param_gngt_target;
+	extern double param_gngt_first_learning_rate;
+	extern double param_gngt_second_learning_rate;
+	extern int param_gngt_edge_age_max;
+	extern double param_gngt_variance_max;
+	extern double param_gngt_length_max;
+	extern int param_nb_epochs_per_frame;
+	extern int param_pen_thickness;
+	extern int param_left_margin;
+	extern int param_right_margin;
+	extern int param_top_margin;
+	extern int param_bottom_margin;
+	extern bool param_morph;
+	extern int param_morph_radius;
 
 	typedef mirage::img::Coding<mirage::colorspace::GRAY_8>::Frame ImageGRAY8;
 	typedef mirage::img::Coding<mirage::colorspace::RGB_24>::Frame ImageRGB24;
@@ -111,7 +111,7 @@ namespace track {
 			void postImg(ImageRGB24& outFrame);
 	};
 
-	ServerConnection* serverConn;
+	extern ServerConnection* serverConn;
 
 	/*-----------------------------------------------------------------------------------------*/
 	/* loads parameters form file or default parameters                                        */
