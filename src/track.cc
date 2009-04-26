@@ -27,7 +27,7 @@ using namespace track;
 /*-----------------------------------------------------------------------------------------*/
 /* set default parameters                                                                  */
 /*-----------------------------------------------------------------------------------------*/
-track::ParameterParser::ParameterParser(void) {
+void track::ParameterParser::loadDefaultParameters() {
 	param_nb_background_samples = 10;
 	param_inter_frame_delay = 10;
 	param_buffer_in_hostname = "localhost";
@@ -66,7 +66,9 @@ track::ParameterParser::ParameterParser(void) {
 	param_right_margin = 5;
 	param_morph = false;
 	param_morph_radius = 3;
-
+}
+track::ParameterParser::ParameterParser(void) {
+	loadDefaultParameters();
 	serverConn = new ServerConnection();
 }
 
@@ -79,7 +81,8 @@ track::ParameterParser::ParameterParser(const std::string& filename) {
 	std::string kwd;
 	std::string mode;
 	char first;
-	SetDefaultParameters();
+
+	loadDefaultParameters();
 
 	file.open(filename.c_str());
 	if (!file) {
@@ -262,6 +265,13 @@ void track::ParameterParser::saveParameters(const std::string& filename) {
 /* connect to server using the parameters in the track namespace                           */
 /*-----------------------------------------------------------------------------------------*/
 track::ServerConnection::ServerConnection() {
+	this->jpgClientDetection = NULL;
+	this->jpgClientIn = NULL;
+	this->jpgClientOut = NULL;
+	this->rawClientDetection = NULL;
+	this->rawClientIn = NULL;
+	this->rawClientOut = NULL;
+
 	std::cout << "  --> " << param_buffer_in_entity << '('
 			<< param_buffer_in_resource << ")@" << param_buffer_in_hostname
 			<< ':' << param_buffer_in_port << std::endl;
@@ -358,7 +368,7 @@ void track::ServerConnection::getImage(bkbd::Image* frame) {
 	static jpeg::Decompress decompressor;
 	int w, h, d;
 
-	src.setAllocationPolicy(bkbd::Image::AllocateAutomatic);
+	frame->setAllocationPolicy(bkbd::Image::AllocateAutomatic);
 	if (param_buffer_in_jpg) {
 		jpgClientIn->get(param_buffer_in_entity, in_jpeg_buf, timestamp);
 		decompressor.setInputStream(in_jpeg_buf.ijpeg());
@@ -374,7 +384,7 @@ void track::ServerConnection::getImage(bkbd::Image* frame) {
 /*-----------------------------------------------------------------------------------------*/
 /* post image to the server                                                                */
 /*-----------------------------------------------------------------------------------------*/
-void track::ServerConnection::postImg(const ImageRGB24& outFrame) {
+void track::ServerConnection::postImg(ImageRGB24& outFrame) {
 	static bkbd::Image dest;
 	static jpeg::Compress compressor;
 	static bkbd::JPEG out_jpeg_buf;
@@ -390,7 +400,7 @@ void track::ServerConnection::postImg(const ImageRGB24& outFrame) {
 				dest.data, param_out_jpeg_quality);
 		jpgClientOut->post(param_buffer_out_entity, out_jpeg_buf);
 	} else
-		raw_client_out->post(param_buffer_out_entity, dest);
+		rawClientOut->post(param_buffer_out_entity, dest);
 }
 
 /*-----------------------------------------------------------------------------------------*/
@@ -461,8 +471,8 @@ void track::MorphoMath::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
 				*pix2 = false;
 		}
 	} else
-		mirage::morph::Format<ImageBool, ImageBool, 0>::Opening(src, element,
-				res);
+		mirage::morph::Format<ImageBool, ImageBool, 0>::Opening(*inFrame, element,
+				*outFrame);
 }
 
 /*-----------------------------------------------------------------------------------------*/
@@ -476,7 +486,7 @@ void track::Contour::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
 			= outFrame->begin(); pix1 != pix_end; ++pix1, ++pix2) {
 		if (*pix1) {
 			pos = !pix2 + offset(1, 0);
-			*pix2 = !(src(pos));
+			*pix2 = !((*inFrame)(pos));
 
 			if (!(*pix2)) {
 				pos = !pix2 + offset(0, 1);
@@ -619,7 +629,7 @@ track::Draw::Draw() {
 	colors[8]._blue = 190;
 }
 
-void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRGB24& source) {
+void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRGB24& original) {
 	vq::Labelizer<GNG_T>::Labeling::iterator label_iter, label_end;
 	vq::Labelizer<GNG_T>::ConnectedComponent* component;
 	vq::Labelizer<GNG_T>::ConnectedComponent::Edges::iterator edge_iter,
@@ -627,10 +637,14 @@ void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRG
 	int label;
 	mirage::img::Line<ImageRGB24> line;
 	mirage::img::Line<ImageRGB24>::pixel_type lpix, lpix_end;
-	mirage::SubFrame<ImageRGB24> dot(result, pen, pen);
+	mirage::SubFrame<ImageRGB24> dot(*result, pen, pen);
 	mirage::img::Coordinate A, B;
 	GNG_T::Node *n1, *n2;
 	mirage::colorspace::RGB_24 paint;
+	mirage::SubFrame<ImageRGB24> source(original,
+					    mirage::img::Coordinate(0,0),
+					    mirage::img::Coordinate(0,0));
+
 
 	mirage::algo::UnaryOp<mirage::SubFrame<ImageRGB24>, ImageRGB24,
 			mirage::algo::Affectation<mirage::SubFrame<ImageRGB24>::value_type,
@@ -644,7 +658,7 @@ void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRG
 		component = label_iter->second;
 
 		if (colors.count(label) == 0)
-			colors[label] = RandomColor();
+			colors[label] = getRandomColor();
 		paint = colors[label];
 
 		for (edge_iter = component->edges.begin(), edge_end
