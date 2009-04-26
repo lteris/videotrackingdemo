@@ -25,6 +25,50 @@ using namespace track;
 #define KWD_MORPH             "MORPHOMATH"
 
 /*-----------------------------------------------------------------------------------------*/
+/* define the global vars in track::                                                       */
+/*-----------------------------------------------------------------------------------------*/
+	int track::param_inter_frame_delay;
+	std::string track::param_buffer_in_hostname;
+	std::string track::param_buffer_in_resource;
+	std::string track::param_buffer_in_entity;
+	int track::param_buffer_in_port;
+	bool track::param_buffer_in_jpg;
+	std::string track::param_buffer_out_hostname;
+	std::string track::param_buffer_out_resource;
+	std::string track::param_buffer_out_entity;
+	int track::param_buffer_out_port;
+	bool track::param_buffer_out_jpg;
+	int track::param_out_jpeg_quality;
+	std::string track::param_buffer_detection_hostname;
+	std::string track::param_buffer_detection_resource;
+	std::string track::param_buffer_detection_entity;
+	int track::param_buffer_detection_port;
+	bool track::param_buffer_detection_jpg;
+	int track::param_detection_jpeg_quality;
+	bool track::param_display_detection;
+	double track::param_color_min_norm2;
+	double track::param_color_min_norm2_margin;
+	double track::param_color_min_cosine;
+	int track::param_nb_background_samples;
+	double track::param_background_coef;
+	double track::param_gngt_target;
+	double track::param_gngt_first_learning_rate;
+	double track::param_gngt_second_learning_rate;
+	int track::param_gngt_edge_age_max;
+	double track::param_gngt_variance_max;
+	double track::param_gngt_length_max;
+	int track::param_nb_epochs_per_frame;
+	int track::param_pen_thickness;
+	int track::param_left_margin;
+	int track::param_right_margin;
+	int track::param_top_margin;
+	int track::param_bottom_margin;
+	bool track::param_morph;
+	int track::param_morph_radius;
+
+	ServerConnection* track::serverConn;
+
+/*-----------------------------------------------------------------------------------------*/
 /* set default parameters                                                                  */
 /*-----------------------------------------------------------------------------------------*/
 void track::ParameterParser::loadDefaultParameters() {
@@ -207,8 +251,7 @@ void track::ParameterParser::saveParameters(const std::string& filename) {
 			<< "# Input and output. Order is host, port, resource, entity, mode (JPEG | IMG)."
 			<< std::endl << KWD_BUFFER_IN << ' ' << param_buffer_in_hostname
 			<< ' ' << param_buffer_in_port << ' ' << param_buffer_in_resource
-			<< ' ' << param_buffer_in_entity << ' '
-			<< Mode(param_buffer_in_jpg) << std::endl << KWD_BUFFER_OUT << ' '
+			<< ' ' << param_buffer_in_entity << ' ' << Mode(param_buffer_in_jpg) << std::endl << KWD_BUFFER_OUT << ' '
 			<< param_buffer_out_hostname << ' ' << param_buffer_out_port << ' '
 			<< param_buffer_out_resource << ' ' << param_buffer_out_entity
 			<< ' ' << Mode(param_buffer_out_jpg) << std::endl << std::endl
@@ -471,8 +514,8 @@ void track::MorphoMath::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
 				*pix2 = false;
 		}
 	} else
-		mirage::morph::Format<ImageBool, ImageBool, 0>::Opening(*inFrame, element,
-				*outFrame);
+		mirage::morph::Format<ImageBool, ImageBool, 0>::Opening(*inFrame,
+				element, *outFrame);
 }
 
 /*-----------------------------------------------------------------------------------------*/
@@ -642,9 +685,7 @@ void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRG
 	GNG_T::Node *n1, *n2;
 	mirage::colorspace::RGB_24 paint;
 	mirage::SubFrame<ImageRGB24> source(original,
-					    mirage::img::Coordinate(0,0),
-					    mirage::img::Coordinate(0,0));
-
+			mirage::img::Coordinate(0, 0), mirage::img::Coordinate(0, 0));
 
 	mirage::algo::UnaryOp<mirage::SubFrame<ImageRGB24>, ImageRGB24,
 			mirage::algo::Affectation<mirage::SubFrame<ImageRGB24>::value_type,
