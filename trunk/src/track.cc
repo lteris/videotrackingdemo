@@ -27,46 +27,46 @@ using namespace track;
 /*-----------------------------------------------------------------------------------------*/
 /* define the global vars in track::                                                       */
 /*-----------------------------------------------------------------------------------------*/
-	int track::param_inter_frame_delay;
-	std::string track::param_buffer_in_hostname;
-	std::string track::param_buffer_in_resource;
-	std::string track::param_buffer_in_entity;
-	int track::param_buffer_in_port;
-	bool track::param_buffer_in_jpg;
-	std::string track::param_buffer_out_hostname;
-	std::string track::param_buffer_out_resource;
-	std::string track::param_buffer_out_entity;
-	int track::param_buffer_out_port;
-	bool track::param_buffer_out_jpg;
-	int track::param_out_jpeg_quality;
-	std::string track::param_buffer_detection_hostname;
-	std::string track::param_buffer_detection_resource;
-	std::string track::param_buffer_detection_entity;
-	int track::param_buffer_detection_port;
-	bool track::param_buffer_detection_jpg;
-	int track::param_detection_jpeg_quality;
-	bool track::param_display_detection;
-	double track::param_color_min_norm2;
-	double track::param_color_min_norm2_margin;
-	double track::param_color_min_cosine;
-	int track::param_nb_background_samples;
-	double track::param_background_coef;
-	double track::param_gngt_target;
-	double track::param_gngt_first_learning_rate;
-	double track::param_gngt_second_learning_rate;
-	int track::param_gngt_edge_age_max;
-	double track::param_gngt_variance_max;
-	double track::param_gngt_length_max;
-	int track::param_nb_epochs_per_frame;
-	int track::param_pen_thickness;
-	int track::param_left_margin;
-	int track::param_right_margin;
-	int track::param_top_margin;
-	int track::param_bottom_margin;
-	bool track::param_morph;
-	int track::param_morph_radius;
+int track::param_inter_frame_delay;
+std::string track::param_buffer_in_hostname;
+std::string track::param_buffer_in_resource;
+std::string track::param_buffer_in_entity;
+int track::param_buffer_in_port;
+bool track::param_buffer_in_jpg;
+std::string track::param_buffer_out_hostname;
+std::string track::param_buffer_out_resource;
+std::string track::param_buffer_out_entity;
+int track::param_buffer_out_port;
+bool track::param_buffer_out_jpg;
+int track::param_out_jpeg_quality;
+std::string track::param_buffer_detection_hostname;
+std::string track::param_buffer_detection_resource;
+std::string track::param_buffer_detection_entity;
+int track::param_buffer_detection_port;
+bool track::param_buffer_detection_jpg;
+int track::param_detection_jpeg_quality;
+bool track::param_display_detection;
+double track::param_color_min_norm2;
+double track::param_color_min_norm2_margin;
+double track::param_color_min_cosine;
+int track::param_nb_background_samples;
+double track::param_background_coef;
+double track::param_gngt_target;
+double track::param_gngt_first_learning_rate;
+double track::param_gngt_second_learning_rate;
+int track::param_gngt_edge_age_max;
+double track::param_gngt_variance_max;
+double track::param_gngt_length_max;
+int track::param_nb_epochs_per_frame;
+int track::param_pen_thickness;
+int track::param_left_margin;
+int track::param_right_margin;
+int track::param_top_margin;
+int track::param_bottom_margin;
+bool track::param_morph;
+int track::param_morph_radius;
 
-	ServerConnection* track::serverConn;
+ServerConnection* track::serverConn;
 
 /*-----------------------------------------------------------------------------------------*/
 /* set default parameters                                                                  */
@@ -156,12 +156,14 @@ track::ParameterParser::ParameterParser(const std::string& filename) {
 						>> mode;
 				param_buffer_in_jpg = true || mode == "jpg" || mode == "jpeg"
 						|| mode == "JPG" || mode == "JPEG";
+
 			} else if (kwd == KWD_BUFFER_OUT) {
 				file >> param_buffer_out_hostname >> param_buffer_out_port
 						>> param_buffer_out_resource >> param_buffer_out_entity
 						>> mode;
 				param_buffer_out_jpg = true || mode == "jpg" || mode == "jpeg"
 						|| mode == "JPG" || mode == "JPEG";
+
 			} else if (kwd == KWD_QUALITY_OUT)
 				file >> param_out_jpeg_quality;
 			else if (kwd == KWD_BUFFER_DETECTION) {
@@ -482,10 +484,9 @@ void track::ForeGround::operator()(ImageGRAY8* inFrame, ImageBool*& outFrame) {
 	if (firstImg) {
 		algo.initForegroundDetection(*inFrame);
 		firstImg = false;
-	} else {
-		algo.SigmaDeltaModified(*inFrame);
-		algo.getMask(*outFrame);
 	}
+	algo.SigmaDeltaModified(*inFrame);
+	algo.getMask(*outFrame);
 }
 
 /*-----------------------------------------------------------------------------------------*/
@@ -496,6 +497,7 @@ void track::MorphoMath::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
 	ImageBool::point_type pos, offset;
 	bool n, s, e, w;
 
+	outFrame->resize(inFrame->_dimension);
 	if (!param_morph) {
 		for (pix1 = inFrame->begin(), pix_end = inFrame->end(), pix2
 				= outFrame->begin(); pix1 != pix_end; ++pix1, ++pix2) {
@@ -510,12 +512,14 @@ void track::MorphoMath::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
 				n = !((*inFrame)(pos));
 
 				*pix2 = !((n && s) || (e && w));
-			} else
+			} else {
 				*pix2 = false;
+			}
 		}
-	} else
+	} else {
 		mirage::morph::Format<ImageBool, ImageBool, 0>::Opening(*inFrame,
 				element, *outFrame);
+	}
 }
 
 /*-----------------------------------------------------------------------------------------*/
@@ -525,6 +529,7 @@ void track::Contour::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
 	ImageBool::pixel_type pix1, pix2, pix_end;
 	ImageBool::point_type pos, dimension, offset;
 
+	outFrame->resize(inFrame->_dimension);
 	for (pix1 = inFrame->begin(), pix_end = inFrame->end(), pix2
 			= outFrame->begin(); pix1 != pix_end; ++pix1, ++pix2) {
 		if (*pix1) {
@@ -546,8 +551,9 @@ void track::Contour::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
 					}
 				}
 			}
-		} else
+		} else {
 			*pix2 = false;
+		}
 	}
 }
 
@@ -684,8 +690,14 @@ void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRG
 	mirage::img::Coordinate A, B;
 	GNG_T::Node *n1, *n2;
 	mirage::colorspace::RGB_24 paint;
+
 	mirage::SubFrame<ImageRGB24> source(original,
 			mirage::img::Coordinate(0, 0), mirage::img::Coordinate(0, 0));
+
+	result->resize(original._dimension);
+
+	std::cout << source.size() << " " << result->size() << " "
+			<< original.size() << "\n";
 
 	mirage::algo::UnaryOp<mirage::SubFrame<ImageRGB24>, ImageRGB24,
 			mirage::algo::Affectation<mirage::SubFrame<ImageRGB24>::value_type,
