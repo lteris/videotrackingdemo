@@ -444,8 +444,9 @@ void track::ServerConnection::postImg(ImageRGB24& outFrame) {
 		compressor.writeImage(dest.width, dest.height, (int) (dest.depth),
 				dest.data, param_out_jpeg_quality);
 		jpgClientOut->post(param_buffer_out_entity, out_jpeg_buf);
-	} else
+	} else {
 		rawClientOut->post(param_buffer_out_entity, dest);
+	}
 }
 
 /*-----------------------------------------------------------------------------------------*/
@@ -690,15 +691,16 @@ void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRG
 	mirage::img::Coordinate A, B;
 	GNG_T::Node *n1, *n2;
 	mirage::colorspace::RGB_24 paint;
+	mirage::img::Coordinate img_origin, img_size;
 
 	mirage::SubFrame<ImageRGB24> source(original,
 			mirage::img::Coordinate(0, 0), mirage::img::Coordinate(0, 0));
+	img_origin(param_left_margin, param_top_margin);
+	img_size = original._dimension - mirage::img::Coordinate(
+			param_right_margin, param_bottom_margin) - img_origin;
+	source.resize(img_origin, img_size);
 
-	result->resize(original._dimension);
-
-	std::cout << source.size() << " " << result->size() << " "
-			<< original.size() << "\n";
-
+	result->resize(source._dimension);
 	mirage::algo::UnaryOp<mirage::SubFrame<ImageRGB24>, ImageRGB24,
 			mirage::algo::Affectation<mirage::SubFrame<ImageRGB24>::value_type,
 					ImageRGB24::value_type> >(source, *result);
