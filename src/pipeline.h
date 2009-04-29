@@ -184,7 +184,7 @@ namespace pipeline {
 
 			/* call functor when there's a queue involved */
 			void callCompute(DummyType<false> ) {
-				compute(frontBuffer, outFrame, readBpQueue->front().data);
+				compute(frontBuffer, outFrame, (readBpQueue->front()).data);
 			}
 
 			/* call functor without a queue */
@@ -551,9 +551,11 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 			private:
 			PipeNodes<LIST, 0, length<LIST>::value, NullList>
 			pipeNodes;
+			PIPE_PARAMETERS* params;
+
 			public:
 			Pipe(const std::string& confFile) {
-				PIPE_PARAMETERS* params = new PIPE_PARAMETERS(confFile);
+				params = new PIPE_PARAMETERS(confFile);
 				/* set the parameters for each stage in the pipeline */
 				/* set the sources for the bypass queues */
 				NodeBase* crt = &pipeNodes;
