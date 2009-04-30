@@ -102,6 +102,14 @@ namespace track {
 			bkbd::Repository<bkbd::Image>::Client* rawClientIn;
 			bkbd::Repository<bkbd::Image>::Client* rawClientOut;
 			bkbd::Repository<bkbd::Image>::Client* rawClientDetection;
+			/* post image buffers */
+			bkbd::Image dest;
+			jpeg::Compress compressor;
+			bkbd::JPEG outJpegBuf;
+			/* get image buffers */
+			bkbd::JPEG inJpegBuf;
+			jpeg::Decompress decompressor;
+			struct timeval timestamp;
 		public:
 			ServerConnection();
 			virtual ~ServerConnection();

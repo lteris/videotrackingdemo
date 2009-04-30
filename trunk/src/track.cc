@@ -408,42 +408,35 @@ track::ServerConnection::~ServerConnection() {
 /* retrieve an image from the server                                                       */
 /*-----------------------------------------------------------------------------------------*/
 void track::ServerConnection::getImage(bkbd::Image* frame) {
-	static bkbd::JPEG in_jpeg_buf;
-	static struct timeval timestamp;
-	static jpeg::Decompress decompressor;
 	int w, h, d;
 
 	frame->setAllocationPolicy(bkbd::Image::AllocateAutomatic);
 	if (param_buffer_in_jpg) {
-		jpgClientIn->get(param_buffer_in_entity, in_jpeg_buf, timestamp);
-		decompressor.setInputStream(in_jpeg_buf.ijpeg());
+		jpgClientIn->get(param_buffer_in_entity, inJpegBuf, timestamp);
+		decompressor.setInputStream(inJpegBuf.ijpeg());
 		decompressor.Flush();
 		decompressor.readHeader(w, h, d);
 		frame->resize(w, h, (bkbd::Image::Depth) d);
 		decompressor.readImage(frame->data);
 	} else
 		rawClientIn->get(param_buffer_in_entity, *frame, timestamp);
-
 }
 
 /*-----------------------------------------------------------------------------------------*/
 /* post image to the server                                                                */
 /*-----------------------------------------------------------------------------------------*/
 void track::ServerConnection::postImg(ImageRGB24& outFrame) {
-	static bkbd::Image dest;
-	static jpeg::Compress compressor;
-	static bkbd::JPEG out_jpeg_buf;
-
 	dest.setAllocationPolicy(bkbd::Image::AllocateNone,
 			(unsigned char*) (&(*outFrame.begin())));
 	dest.resize(outFrame._dimension[0], outFrame._dimension[1],
 			bkbd::Image::RGB24);
+	dest.data = (unsigned char*) (&(*outFrame.begin()));
 
 	if (param_buffer_out_jpg) {
-		compressor.setOutputStream(out_jpeg_buf.ojpeg());
+		compressor.setOutputStream(outJpegBuf.ojpeg());
 		compressor.writeImage(dest.width, dest.height, (int) (dest.depth),
 				dest.data, param_out_jpeg_quality);
-		jpgClientOut->post(param_buffer_out_entity, out_jpeg_buf);
+		jpgClientOut->post(param_buffer_out_entity, outJpegBuf);
 	} else {
 		rawClientOut->post(param_buffer_out_entity, dest);
 	}
