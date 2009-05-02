@@ -18,7 +18,7 @@
 #include <queue>
 
 namespace pipeline {
-#define MAX_FRAMES_IN_PIPE 1000	/* the sequence number counter resets at this number */
+#define MAX_FRAMES_IN_PIPE 100000	/* the sequence number counter resets at this number */
 
 	/*-----------------------------------------------------------------------------------------*/
 	/* container for images passed between frames                                              */
@@ -336,6 +336,12 @@ namespace pipeline {
 				pthread_mutex_lock(&condMutex);
 				if (!freshInput) {
 					wait4Input = true;
+				} else {
+					freshInput = false;
+				}
+				if (POSITION_IN_PIPE == MIDDLE) {
+					std::cout << crtSeqNo << " " << freshInput << " "
+							<< wait4Input << " " << stopFlag << "\n";
 				}
 				while (wait4Input && !stopFlag) {
 					pthread_cond_wait(&syncCond, &condMutex);
