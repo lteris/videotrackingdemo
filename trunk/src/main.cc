@@ -25,11 +25,13 @@ int main() {
 	typedef TypeList<stage_draw, list_7> list_8;
 	typedef TypeList<stage_poster, list_8> type_list;
 
-	Pipe<type_list, track::ParameterParser> pipe("toto.demo");
+	track::ParameterParser params("toto.demo");
+	Pipe<type_list> pipe;
 
 	pipe.start();
 
-	ost::Thread::sleep(1000000);
+//	ost::Thread::sleep(1000000);
+	while(true);
 
 	pipe.stop();
 	pipe.join();

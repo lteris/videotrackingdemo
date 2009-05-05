@@ -278,6 +278,7 @@ namespace pipeline {
 
 					callCompute(DummyType<
 							SameType<Q_TYPE, NullList>::value::value> ());
+
 					if (POSITION_IN_PIPE == FIRST) {
 						/* generate a new crt number */
 						crtSeqNo = (crtSeqNo++) % MAX_FRAMES_IN_PIPE;
@@ -338,10 +339,6 @@ namespace pipeline {
 					wait4Input = true;
 				} else {
 					freshInput = false;
-				}
-				if (POSITION_IN_PIPE == MIDDLE) {
-					std::cout << crtSeqNo << " " << freshInput << " "
-							<< wait4Input << " " << stopFlag << "\n";
 				}
 				while (wait4Input && !stopFlag) {
 					pthread_cond_wait(&syncCond, &condMutex);
@@ -552,17 +549,14 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 		/*-----------------------------------------------------------------------------------------*/
 		/* builds the nodes in the pipeline and the links between the stages                       */
 		/*-----------------------------------------------------------------------------------------*/
-		template<typename LIST, typename PIPE_PARAMETERS>
+		template<typename LIST>
 		class Pipe {
 			private:
 			PipeNodes<LIST, 0, length<LIST>::value, NullList>
 			pipeNodes;
-			PIPE_PARAMETERS* params;
 
 			public:
-			Pipe(const std::string& confFile) {
-				params = new PIPE_PARAMETERS(confFile);
-				/* set the parameters for each stage in the pipeline */
+			Pipe() {
 				/* set the sources for the bypass queues */
 				NodeBase* crt = &pipeNodes;
 				while (crt->nextNode != NULL) {
