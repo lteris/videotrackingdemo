@@ -196,9 +196,9 @@ track::ParameterParser::ParameterParser(const std::string& filename) {
 				file >> param_gngt_length_max;
 			else if (kwd == KWD_EPOCHS)
 				file >> param_nb_epochs_per_frame;
-			else if (kwd == KWD_PEN_THICKNESS)
+			else if (kwd == KWD_PEN_THICKNESS) {
 				file >> param_pen_thickness;
-			else if (kwd == KWD_MARGINS)
+			} else if (kwd == KWD_MARGINS)
 				file >> param_left_margin >> param_right_margin
 						>> param_top_margin >> param_bottom_margin;
 			else if (kwd == KWD_MORPH) {
@@ -442,6 +442,30 @@ void track::ServerConnection::postImg(ImageRGB24& outFrame) {
 	}
 }
 
+void track::ServerConnection::postImg(ImageBool& outFrame) {
+	unsigned char* buf = (unsigned char*) (&(*outFrame.begin()));
+	for (int i = 0; i < outFrame.size(); i++) {
+		if (buf[i] == true) {
+			buf[i] = 0xff;
+		}
+	}
+
+	dest.setAllocationPolicy(bkbd::Image::AllocateNone,
+			(unsigned char*) (&(*outFrame.begin())));
+	dest.resize(outFrame._dimension[0], outFrame._dimension[1],
+			bkbd::Image::Gray);
+	dest.data = (unsigned char*) (&(*outFrame.begin()));
+
+	if (param_buffer_out_jpg) {
+		compressor.setOutputStream(outJpegBuf.ojpeg());
+		compressor.writeImage(dest.width, dest.height, (int) (dest.depth),
+				dest.data, param_out_jpeg_quality);
+		jpgClientOut->post(param_buffer_out_entity, outJpegBuf);
+	} else {
+		rawClientOut->post(param_buffer_out_entity, dest);
+	}
+}
+
 /*-----------------------------------------------------------------------------------------*/
 /* retrieve images from the server                                                         */
 /*-----------------------------------------------------------------------------------------*/
@@ -453,6 +477,10 @@ void track::ImageFeeder::operator ()(void* dummy, bkbd::Image*& outFrame) {
 /* post images to the server                                                               */
 /*-----------------------------------------------------------------------------------------*/
 void track::ImagePoster::operator ()(ImageRGB24* image, void* dummy) {
+	track::serverConn->postImg(*image);
+}
+
+void track::ImagePoster::operator ()(ImageBool* image, void* dummy) {
 	track::serverConn->postImg(*image);
 }
 
@@ -633,6 +661,7 @@ mirage::colorspace::RGB_24 track::Draw::getRandomColor() {
 /* initialize colors */
 track::Draw::Draw() {
 	pen[0] = pen[1] = param_pen_thickness;
+
 	half_pen = pen / 2;
 
 	colors[0]._red = 255;
@@ -678,9 +707,9 @@ void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRG
 	vq::Labelizer<GNG_T>::ConnectedComponent::Edges::iterator edge_iter,
 			edge_end;
 	int label;
+
 	mirage::img::Line<ImageRGB24> line;
 	mirage::img::Line<ImageRGB24>::pixel_type lpix, lpix_end;
-	mirage::SubFrame<ImageRGB24> dot(*result, pen, pen);
 	mirage::img::Coordinate A, B;
 	GNG_T::Node *n1, *n2;
 	mirage::colorspace::RGB_24 paint;
@@ -691,9 +720,12 @@ void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRG
 	img_origin(param_left_margin, param_top_margin);
 	img_size = original._dimension - mirage::img::Coordinate(
 			param_right_margin, param_bottom_margin) - img_origin;
-	source.resize(img_origin, img_size);
 
+	source.resize(img_origin, img_size);
 	result->resize(source._dimension);
+
+	mirage::SubFrame<ImageRGB24> dot(*result, pen, pen); // silly pen args
+
 	mirage::algo::UnaryOp<mirage::SubFrame<ImageRGB24>, ImageRGB24,
 			mirage::algo::Affectation<mirage::SubFrame<ImageRGB24>::value_type,
 					ImageRGB24::value_type> >(source, *result);

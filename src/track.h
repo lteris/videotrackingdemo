@@ -117,6 +117,9 @@ namespace track {
 			void getImage(bkbd::Image* frame);
 			/* post outFrame to the output entity */
 			void postImg(ImageRGB24& outFrame);
+
+			/* test method */
+			void postImg(ImageBool& outFrame);
 	};
 
 	extern ServerConnection* serverConn;
@@ -151,6 +154,7 @@ namespace track {
 	class ImagePoster {
 		public:
 			void operator()(ImageRGB24* image, void* dummy);
+			void operator()(ImageBool* image, void* dummy);
 	};
 
 	/*-----------------------------------------------------------------------------------------*/
@@ -255,7 +259,7 @@ namespace track {
 	class Draw {
 		private:
 			std::map<int, mirage::colorspace::RGB_24> colors;
-			ImageRGB24::point_type pen, half_pen;
+			mirage::img::Coordinate pen, half_pen;
 
 			mirage::colorspace::RGB_24 getRandomColor();
 		public:
