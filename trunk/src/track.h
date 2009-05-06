@@ -223,6 +223,9 @@ namespace track {
 					Element;
 			Element element;
 		public:
+			MorphoMath() {
+				mirage::morph::Mask::Disk(element, param_morph_radius);
+			}
 			void operator()(ImageBool* inFrame, ImageBool*& outFrame);
 	};
 

@@ -1,7 +1,6 @@
 #include "track.h"
 #include "pipeline.h"
 
-
 using namespace pipeline;
 
 int main() {
@@ -10,8 +9,10 @@ int main() {
 	typedef Types4Stage<track::LABELIZER, track::GNGT, 0> stage_gngt;
 	typedef Types4Stage<track::ImageBool, track::Contour, 0> stage_contour;
 	typedef Types4Stage<track::ImageBool, track::MorphoMath, 0> stage_morpho;
-	typedef Types4Stage<track::ImageBool, track::ForeGround, 0> stage_foreground;
-	typedef Types4Stage<track::ImageGRAY8, track::Convert2Gray, 0> stage_get_gray;
+	typedef Types4Stage<track::ImageBool, track::ForeGround, 0>
+			stage_foreground;
+	typedef Types4Stage<track::ImageGRAY8, track::Convert2Gray, 0>
+			stage_get_gray;
 	typedef Types4Stage<track::ImageRGB24, track::Convert2RGB, 0> stage_get_rgb;
 	typedef Types4Stage<bkbd::Image, track::ImageFeeder, 0> stage_feeder;
 
@@ -30,8 +31,9 @@ int main() {
 
 	pipe.start();
 
-//	ost::Thread::sleep(1000000);
-	while(true);
+	//	ost::Thread::sleep(1000000);
+	while (true)
+		;
 
 	pipe.stop();
 	pipe.join();

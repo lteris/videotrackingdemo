@@ -715,20 +715,9 @@ void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRG
 	mirage::colorspace::RGB_24 paint;
 	mirage::img::Coordinate img_origin, img_size;
 
-	mirage::SubFrame<ImageRGB24> source(original,
-			mirage::img::Coordinate(0, 0), mirage::img::Coordinate(0, 0));
-	img_origin(param_left_margin, param_top_margin);
-	img_size = original._dimension - mirage::img::Coordinate(
-			param_right_margin, param_bottom_margin) - img_origin;
-
-	source.resize(img_origin, img_size);
-	result->resize(source._dimension);
-
+	result->resize(original._dimension);
+	*result = original;
 	mirage::SubFrame<ImageRGB24> dot(*result, pen, pen); // silly pen args
-
-	mirage::algo::UnaryOp<mirage::SubFrame<ImageRGB24>, ImageRGB24,
-			mirage::algo::Affectation<mirage::SubFrame<ImageRGB24>::value_type,
-					ImageRGB24::value_type> >(source, *result);
 
 	line << (*result);
 	for (label_iter = labelizer->labeling.begin(), label_end
@@ -745,6 +734,7 @@ void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRG
 				= component->edges.end(); edge_iter != edge_end; ++edge_iter) {
 			n1 = (*edge_iter)->n1;
 			n2 = (*edge_iter)->n2;
+
 			A((int) (n1->value.w[0] + .5), (int) (n1->value.w[1] + .5));
 			B((int) (n2->value.w[0] + .5), (int) (n2->value.w[1] + .5));
 			if ((A[0] != B[0]) || (A[1] != B[1])) {
