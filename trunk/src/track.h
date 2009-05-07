@@ -19,8 +19,6 @@
 #include "Foreground.h"
 
 namespace track {
-
-	extern int param_inter_frame_delay;
 	extern std::string param_buffer_in_hostname;
 	extern std::string param_buffer_in_resource;
 	extern std::string param_buffer_in_entity;
