@@ -5,26 +5,16 @@ using namespace pipeline;
 
 int main() {
 	typedef Types4Stage<track::ImageRGB24, track::ImagePoster, 0> stage_poster;
-	typedef Types4Stage<track::ImageRGB24, track::Draw, 2> stage_draw;
-	typedef Types4Stage<track::LABELIZER, track::GNGT, 0> stage_gngt;
-	typedef Types4Stage<track::ImageBool, track::Contour, 0> stage_contour;
-	typedef Types4Stage<track::ImageBool, track::MorphoMath, 0> stage_morpho;
-	typedef Types4Stage<track::ImageBool, track::ForeGround, 0>
-			stage_foreground;
-	typedef Types4Stage<track::ImageGRAY8, track::Convert2Gray, 0>
-			stage_get_gray;
-	typedef Types4Stage<track::ImageRGB24, track::Convert2RGB, 0> stage_get_rgb;
-	typedef Types4Stage<bkbd::Image, track::ImageFeeder, 0> stage_feeder;
+	typedef Types4Stage<track::ImageRGB24, track::GNGT_Draw, 1> stage_gngt_draw;
+	typedef Types4Stage<track::ImageBool, track::Morpho_Contour, 0> stage_morpho_contour;
+	typedef Types4Stage<track::ImageBool, track::ForeGround, 0>	stage_foreground;
+	typedef Types4Stage<track::ImageRGB24, track::ImageFeeder_RGB24, 0> stage_feeder;
 
 	typedef TypeList<stage_feeder> list_1;
-	typedef TypeList<stage_get_rgb, list_1> list_2;
-	typedef TypeList<stage_get_gray, list_2> list_3;
-	typedef TypeList<stage_foreground, list_3> list_4;
-	typedef TypeList<stage_morpho, list_4> list_5;
-	typedef TypeList<stage_contour, list_5> list_6;
-	typedef TypeList<stage_gngt, list_6> list_7;
-	typedef TypeList<stage_draw, list_7> list_8;
-	typedef TypeList<stage_poster, list_8> type_list;
+	typedef TypeList<stage_foreground, list_1> list_2;
+	typedef TypeList<stage_morpho_contour, list_2> list_3;
+	typedef TypeList<stage_gngt_draw, list_3> list_4;
+	typedef TypeList<stage_poster, list_4> type_list;
 
 	track::ParameterParser params("toto.demo");
 	Pipe<type_list> pipe;
