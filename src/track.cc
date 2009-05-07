@@ -469,10 +469,11 @@ void track::ServerConnection::postImg(ImageBool& outFrame) {
 /*-----------------------------------------------------------------------------------------*/
 /* retrieve images from the server                                                         */
 /*-----------------------------------------------------------------------------------------*/
-void track::ImageFeeder::operator ()(void* dummy, bkbd::Image*& outFrame) {
-	track::serverConn->getImage(outFrame);
+void track::ImageFeeder_RGB24::operator ()(void* dummy, ImageRGB24*& outFrame) {
+	track::serverConn->getImage(&buffer);
+	outFrame->resize(mirage::img::Coordinate(buffer.width, buffer.height),
+			(mirage::colorspace::RGB_24*) (buffer.data));
 }
-
 /*-----------------------------------------------------------------------------------------*/
 /* post images to the server                                                               */
 /*-----------------------------------------------------------------------------------------*/
@@ -487,42 +488,66 @@ void track::ImagePoster::operator ()(ImageBool* image, void* dummy) {
 /*-----------------------------------------------------------------------------------------*/
 /* obtain grayscale image from bkbd::Image                                                 */
 /*-----------------------------------------------------------------------------------------*/
-void track::Convert2RGB::operator ()(bkbd::Image* inFrame, ImageRGB24*& outFrame) {
-	outFrame->resize(mirage::img::Coordinate(inFrame->width, inFrame->height),
-			(mirage::colorspace::RGB_24*) (inFrame->data));
-}
-
-void track::Convert2Gray::operator ()(ImageRGB24* inFrame, ImageGRAY8*& outFrame) {
-	outFrame->resize(inFrame->_dimension);
+void track::ForeGround::convert2Gray(ImageRGB24* inFrame) {
+	buffer.resize(inFrame->_dimension);
 	mirage::algo::UnaryOp<ImageRGB24, ImageGRAY8,
 			mirage::colorspace::RGBToGray<ImageRGB24::value_type,
-					ImageGray8::value_type> >(*inFrame, *outFrame);
+					ImageGray8::value_type> >(*inFrame, buffer);
 }
 
-/*-----------------------------------------------------------------------------------------*/
-/* foreground detection                                                                    */
-/*-----------------------------------------------------------------------------------------*/
-void track::ForeGround::operator()(ImageGRAY8* inFrame, ImageBool*& outFrame) {
+void track::ForeGround::getForeground(ImageBool*& outFrame) {
 	if (firstImg) {
-		algo.initForegroundDetection(*inFrame);
+		algo.initForegroundDetection(buffer);
 		firstImg = false;
 	}
-	algo.SigmaDeltaModified(*inFrame);
+	algo.SigmaDeltaModified(buffer);
 	algo.getMask(*outFrame);
 }
 
 /*-----------------------------------------------------------------------------------------*/
-/* eliminate noise from the image                                                          */
+/* get contour from the foreground image                                                   */
 /*-----------------------------------------------------------------------------------------*/
-void track::MorphoMath::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
+void track::Morpho_Contour::getContour(ImageBool& outFrame) {
+	ImageBool::pixel_type pix1, pix2, pix_end;
+	ImageBool::point_type pos, dimension, offset;
+
+	outFrame.resize(buffer._dimension);
+	for (pix1 = buffer.begin(), pix_end = buffer.end(), pix2
+			= outFrame.begin(); pix1 != pix_end; ++pix1, ++pix2) {
+		if (*pix1) {
+			pos = !pix2 + offset(1, 0);
+			*pix2 = !(buffer(pos));
+
+			if (!(*pix2)) {
+				pos = !pix2 + offset(0, 1);
+				*pix2 = !(buffer(pos));
+
+				if (!(*pix2)) {
+
+					pos = !pix2 + offset(0, -1);
+					*pix2 = !(buffer(pos));
+
+					if (!(*pix2)) {
+						pos = !pix2 + offset(-1, 0);
+						*pix2 = !((outFrame)(pos));
+					}
+				}
+			}
+		} else {
+			*pix2 = false;
+		}
+	}
+}
+
+void track::Morpho_Contour::morphoMath(ImageBool* inFrame) {
 	ImageBool::pixel_type pix1, pix2, pix_end;
 	ImageBool::point_type pos, offset;
 	bool n, s, e, w;
 
-	outFrame->resize(inFrame->_dimension);
+	buffer.resize(inFrame->_dimension);
 	if (!param_morph) {
 		for (pix1 = inFrame->begin(), pix_end = inFrame->end(), pix2
-				= outFrame->begin(); pix1 != pix_end; ++pix1, ++pix2) {
+				= buffer.begin(); pix1 != pix_end; ++pix1, ++pix2) {
 			if (*pix1) {
 				pos = !pix2 + offset(1, 0);
 				w = !((*inFrame)(pos));
@@ -540,49 +565,14 @@ void track::MorphoMath::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
 		}
 	} else {
 		mirage::morph::Format<ImageBool, ImageBool, 0>::Opening(*inFrame,
-				element, *outFrame);
-	}
-}
-
-/*-----------------------------------------------------------------------------------------*/
-/* get contour from the foreground image                                                   */
-/*-----------------------------------------------------------------------------------------*/
-void track::Contour::operator ()(ImageBool* inFrame, ImageBool*& outFrame) {
-	ImageBool::pixel_type pix1, pix2, pix_end;
-	ImageBool::point_type pos, dimension, offset;
-
-	outFrame->resize(inFrame->_dimension);
-	for (pix1 = inFrame->begin(), pix_end = inFrame->end(), pix2
-			= outFrame->begin(); pix1 != pix_end; ++pix1, ++pix2) {
-		if (*pix1) {
-			pos = !pix2 + offset(1, 0);
-			*pix2 = !((*inFrame)(pos));
-
-			if (!(*pix2)) {
-				pos = !pix2 + offset(0, 1);
-				*pix2 = !((*inFrame)(pos));
-
-				if (!(*pix2)) {
-
-					pos = !pix2 + offset(0, -1);
-					*pix2 = !((*inFrame)(pos));
-
-					if (!(*pix2)) {
-						pos = !pix2 + offset(-1, 0);
-						*pix2 = !((*outFrame)(pos));
-					}
-				}
-			}
-		} else {
-			*pix2 = false;
-		}
+				element, buffer);
 	}
 }
 
 /*-----------------------------------------------------------------------------------------*/
 /* apply gngt on the contour                                                               */
 /*-----------------------------------------------------------------------------------------*/
-void track::GNGT::feedGNGT(ImageBool& contour) {
+void track::GNGT_Draw::feedGNGT(ImageBool& contour) {
 	ImageBool::pixel_type pix, pix_end;
 	std::vector<Input>::iterator iter, iter_end;
 	Input example;
@@ -617,7 +607,7 @@ void track::GNGT::feedGNGT(ImageBool& contour) {
 	algo.CloseEpoch();
 }
 
-void track::GNGT::labelize(LABELIZER& labelizer) {
+void track::GNGT_Draw::labelize() {
 	GNG_T::Edges::iterator edge_iter, edge_end;
 	GNG_T::Nodes::iterator node_iter, node_end;
 	GNG_T::Node *n;
@@ -645,7 +635,7 @@ void track::GNGT::labelize(LABELIZER& labelizer) {
 /*-----------------------------------------------------------------------------------------*/
 /* draw the graph over the original image                                                  */
 /*-----------------------------------------------------------------------------------------*/
-mirage::colorspace::RGB_24 track::Draw::getRandomColor() {
+mirage::colorspace::RGB_24 track::GNGT_Draw::getRandomColor() {
 	mirage::colorspace::RGB_24 res;
 
 	res._red = (mirage::colorspace::RGB_24::value_type) (256.0 * (rand()
@@ -659,7 +649,7 @@ mirage::colorspace::RGB_24 track::Draw::getRandomColor() {
 }
 
 /* initialize colors */
-track::Draw::Draw() {
+track::GNGT_Draw::GNGT_Draw() {
 	pen[0] = pen[1] = param_pen_thickness;
 
 	half_pen = pen / 2;
@@ -701,7 +691,7 @@ track::Draw::Draw() {
 	colors[8]._blue = 190;
 }
 
-void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRGB24& original) {
+void track::GNGT_Draw::draw(ImageRGB24*& result, ImageRGB24& original) {
 	vq::Labelizer<GNG_T>::Labeling::iterator label_iter, label_end;
 	vq::Labelizer<GNG_T>::ConnectedComponent* component;
 	vq::Labelizer<GNG_T>::ConnectedComponent::Edges::iterator edge_iter,
@@ -720,8 +710,8 @@ void track::Draw::operator ()(LABELIZER* labelizer, ImageRGB24*& result, ImageRG
 	mirage::SubFrame<ImageRGB24> dot(*result, pen, pen); // silly pen args
 
 	line << (*result);
-	for (label_iter = labelizer->labeling.begin(), label_end
-			= labelizer->labeling.end(); label_iter != label_end; ++label_iter) {
+	for (label_iter = labelizer.labeling.begin(), label_end
+			= labelizer.labeling.end(); label_iter != label_end; ++label_iter) {
 
 		label = label_iter->first;
 		component = label_iter->second;

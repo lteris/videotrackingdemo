@@ -142,9 +142,11 @@ namespace track {
 	/*-----------------------------------------------------------------------------------------*/
 	/* retrieves images from the server and feeds them to the next stage                       */
 	/*-----------------------------------------------------------------------------------------*/
-	class ImageFeeder {
+	class ImageFeeder_RGB24 {
+		private:
+			bkbd::Image buffer;
 		public:
-			void operator()(void* dummy, bkbd::Image*& outFrame);
+			void operator()(void* dummy, ImageRGB24*& outFrame);
 	};
 
 	/*-----------------------------------------------------------------------------------------*/
@@ -155,22 +157,6 @@ namespace track {
 		public:
 			void operator()(ImageRGB24* image, void* dummy);
 			void operator()(ImageBool* image, void* dummy);
-	};
-
-	/*-----------------------------------------------------------------------------------------*/
-	/* obtain mirage rgb24 image image from bkbd::Image                                          */
-	/*-----------------------------------------------------------------------------------------*/
-	class Convert2RGB {
-		public:
-			void operator()(bkbd::Image* inFrame, ImageRGB24*& outFrame);
-	};
-
-	/*-----------------------------------------------------------------------------------------*/
-	/* obtain grayscale image from rgb24                                                       */
-	/*-----------------------------------------------------------------------------------------*/
-	class Convert2Gray {
-		public:
-			void operator()(ImageRGB24* inFrame, ImageGRAY8*& outFrame);
 	};
 
 	/*-----------------------------------------------------------------------------------------*/
@@ -205,72 +191,70 @@ namespace track {
 						return 2;
 					}
 			};
+			ImageGRAY8 buffer;
 			mirage::img::ForegroundDetection<DetectionParams, 0> algo;
 			bool firstImg;
+
+			void convert2Gray(ImageRGB24* inFrame);
+			void getForeground(ImageBool*& outFrame);
 		public:
 			ForeGround() {
 				firstImg = true;
 			}
-			void operator()(ImageGRAY8* inFrame, ImageBool*& outFrame);
+			void operator()(ImageRGB24* inFrame, ImageBool*& outFrame){
+				convert2Gray(inFrame);
+				getForeground(outFrame);
+			}
 	};
 
 	/*-----------------------------------------------------------------------------------------*/
 	/* various transformations on the image                                                    */
 	/*-----------------------------------------------------------------------------------------*/
-	class MorphoMath {
+	class Morpho_Contour {
 		private:
 			typedef mirage::img::Coding<mirage::morph::MaskValue>::Frame
 					Element;
 			Element element;
+			ImageBool buffer;
+
+			void morphoMath(ImageBool* inFrame);
+			void getContour(ImageBool& outFrame);
 		public:
-			MorphoMath() {
+			Morpho_Contour() {
 				mirage::morph::Mask::Disk(element, param_morph_radius);
 			}
-			void operator()(ImageBool* inFrame, ImageBool*& outFrame);
-	};
-
-	/*-----------------------------------------------------------------------------------------*/
-	/* retrieves contour to be fed to the GNGT module							               */
-	/*-----------------------------------------------------------------------------------------*/
-	class Contour {
-		public:
-			void operator()(ImageBool* inFrame, ImageBool*& outFrame);
-
+			void operator()(ImageBool* inFrame, ImageBool*& outFrame){
+				morphoMath(inFrame);
+				getContour(*outFrame);
+			}
 	};
 
 	/*-----------------------------------------------------------------------------------------*/
 	/* applies gngt on the contour retrieved by the contour detection class                    */
 	/*-----------------------------------------------------------------------------------------*/
-	class GNGT {
+	class GNGT_Draw {
 		private:
 			GNG_T algo;
 			std::vector<Input> examples;
+			std::map<int, mirage::colorspace::RGB_24> colors;
+			mirage::img::Coordinate pen, half_pen;
+			LABELIZER labelizer;
+
+			mirage::colorspace::RGB_24 getRandomColor();
 
 			void feedGNGT(ImageBool& contour);
-			void labelize(LABELIZER& labelizer);
+			void labelize();
+			void draw(ImageRGB24*& outFrame, ImageRGB24& fromQueue);
 		public:
-			void operator()(ImageBool* contour, LABELIZER*& labelizer) {
+			GNGT_Draw();
+			void operator()(ImageBool* contour, ImageRGB24*& outFrame,
+					ImageRGB24& fromQueue) {
 				feedGNGT(*contour);
-				labelize(*labelizer);
+				labelize();
+				draw(outFrame, fromQueue);
 			}
 
 	};
-
-	/*-----------------------------------------------------------------------------------------*/
-	/* draws the graph over the image received from the conversion stage                       */
-	/*-----------------------------------------------------------------------------------------*/
-	class Draw {
-		private:
-			std::map<int, mirage::colorspace::RGB_24> colors;
-			mirage::img::Coordinate pen, half_pen;
-
-			mirage::colorspace::RGB_24 getRandomColor();
-		public:
-			Draw();
-			void operator()(LABELIZER* inFrame, ImageRGB24*& outFrame,
-					ImageRGB24& fromQueue);
-	};
-
 }
 
 #endif /* TRACK_H_ */
