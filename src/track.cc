@@ -4,7 +4,6 @@ using namespace track;
 
 #define KWD_BACKGROUND_SAMPLE "BACKGROUND_SAMPLES"
 #define KWD_BACKGROUND_COEF   "BACKGROUND_COEF"
-#define KWD_INTERFRAME_DELAY  "FRAME_DELAY"
 #define KWD_BUFFER_IN         "BUFFER_IN"
 #define KWD_BUFFER_OUT        "BUFFER_OUT"
 #define KWD_QUALITY_OUT       "JPEG_QUALITY_OUT"
@@ -27,7 +26,6 @@ using namespace track;
 /*-----------------------------------------------------------------------------------------*/
 /* define the global vars in track::                                                       */
 /*-----------------------------------------------------------------------------------------*/
-int track::param_inter_frame_delay;
 std::string track::param_buffer_in_hostname;
 std::string track::param_buffer_in_resource;
 std::string track::param_buffer_in_entity;
@@ -73,7 +71,6 @@ ServerConnection* track::serverConn;
 /*-----------------------------------------------------------------------------------------*/
 void track::ParameterParser::loadDefaultParameters() {
 	param_nb_background_samples = 10;
-	param_inter_frame_delay = 10;
 	param_buffer_in_hostname = "localhost";
 	param_buffer_in_resource = "JPEG-RESOURCE";
 	param_buffer_in_entity = "video-buf";
@@ -148,8 +145,6 @@ track::ParameterParser::ParameterParser(const std::string& filename) {
 				file >> param_nb_background_samples;
 			else if (kwd == KWD_BACKGROUND_COEF)
 				file >> param_background_coef;
-			else if (kwd == KWD_INTERFRAME_DELAY)
-				file >> param_inter_frame_delay;
 			else if (kwd == KWD_BUFFER_IN) {
 				file >> param_buffer_in_hostname >> param_buffer_in_port
 						>> param_buffer_in_resource >> param_buffer_in_entity
@@ -248,8 +243,7 @@ void track::ParameterParser::saveParameters(const std::string& filename) {
 			<< "# Background updating low-pass filter coefficient."
 			<< std::endl << KWD_BACKGROUND_COEF << ' ' << param_background_coef
 			<< std::endl << std::endl << "# Interframe grabbing delay (ms)."
-			<< std::endl << KWD_INTERFRAME_DELAY << ' '
-			<< param_inter_frame_delay << std::endl << std::endl
+			<< std::endl << std::endl
 			<< "# Input and output. Order is host, port, resource, entity, mode (JPEG | IMG)."
 			<< std::endl << KWD_BUFFER_IN << ' ' << param_buffer_in_hostname
 			<< ' ' << param_buffer_in_port << ' ' << param_buffer_in_resource
@@ -511,28 +505,24 @@ void track::Morpho_Contour::getContour(ImageBool& outFrame) {
 	ImageBool::pixel_type pix1, pix2, pix_end;
 	ImageBool::point_type pos, dimension, offset;
 
+//	std::cout<<&buffer << " "<<&outFrame<<" "<<&(*(buffer.begin()))<<" "<< &(*(outFrame.begin()))<< "\n";
 	outFrame.resize(buffer._dimension);
 	for (pix1 = buffer.begin(), pix_end = buffer.end(), pix2
 			= outFrame.begin(); pix1 != pix_end; ++pix1, ++pix2) {
 		if (*pix1) {
 			pos = !pix2 + offset(1, 0);
-			*pix2 = !(buffer(pos));
 
-			if (!(*pix2)) {
+			if(!(*pix2 = !(buffer(pos)))) {
 				pos = !pix2 + offset(0, 1);
-				*pix2 = !(buffer(pos));
-
-				if (!(*pix2)) {
-
+				if(!(*pix2 = !(buffer(pos)))) {
 					pos = !pix2 + offset(0, -1);
-					*pix2 = !(buffer(pos));
-
-					if (!(*pix2)) {
+					if(!(*pix2 = !(buffer(pos)))){
 						pos = !pix2 + offset(-1, 0);
-						*pix2 = !((outFrame)(pos));
+						*pix2 = !(buffer(pos));
 					}
 				}
 			}
+
 		} else {
 			*pix2 = false;
 		}
