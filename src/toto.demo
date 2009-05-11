@@ -1,0 +1,41 @@
+######################################
+#                                    #
+# Parameters for gngt-video tracking #
+#                                    #
+######################################
+
+# Input and output. Order is host, port, resource, entity, mode (JPEG | IMG).
+#BUFFER_IN localhost 10000 JPEG-1 axis-3 jpeg
+BUFFER_IN localhost 10000 JPEG-1 board-2 jpeg
+BUFFER_OUT localhost 10000 JPEG-3 board-1 jpeg
+
+# Idf output is compressed, this is its Jpeg quality (1--100).
+JPEG_QUALITY_OUT 70
+
+# Comment out the following to disable the sending
+# of object detection result to server.
+DISPLAY_DETECTION
+# If enabled, this describe the sending of detection to the server.
+BUFFER_DETECTION localhost 10000 JPEG-3 board-3 jpeg
+JPEG_QUALITY_DETECTION 70
+
+# GNG-T Parameters : target, maximum edge age,
+# winner and second learning rates.
+GNGT_TARGET 30
+GNGT_EDGE_AGE 20
+GNGT_LEARNING_RATES 0.05 0.005
+# Number of GNG-T epochs per frame (a supplementary one will be actually used).
+GNGT_EPOCHS_PER_FRAME 10
+# Maximal variance for a non noisy node.
+GNGT_MAX_VARIANCE 50
+# Maximal edge length inside a polygon.
+GNGT_MAX_LENGTH 20
+
+# Drawing paremeters
+PEN_THICKNESS 3
+
+# Uncomment the following line to enable morpho-matematical
+# detection cleaning. Number is the mask radius.
+# MORPHOMATH 3
+
+
