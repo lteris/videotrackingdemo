@@ -2,17 +2,12 @@
 
 using namespace track;
 
-#define KWD_BACKGROUND_SAMPLE "BACKGROUND_SAMPLES"
-#define KWD_BACKGROUND_COEF   "BACKGROUND_COEF"
 #define KWD_BUFFER_IN         "BUFFER_IN"
 #define KWD_BUFFER_OUT        "BUFFER_OUT"
 #define KWD_QUALITY_OUT       "JPEG_QUALITY_OUT"
 #define KWD_BUFFER_DETECTION  "BUFFER_DETECTION"
 #define KWD_QUALITY_DETECTION "JPEG_QUALITY_DETECTION"
 #define KWD_DISPLAY_DETECTION "DISPLAY_DETECTION"
-#define KWD_COS               "COLOR_MIN_COSINE"
-#define KWD_NORM              "COLOR_MIN_SQUARE_NORM"
-#define KWD_NORM_MARGIN       "COLOR_MIN_SQUARE_NORM_MARGIN"
 #define KWD_TARGET            "GNGT_TARGET"
 #define KWD_AGE               "GNGT_EDGE_AGE"
 #define KWD_LEARNING_RATES    "GNGT_LEARNING_RATES"
@@ -20,7 +15,6 @@ using namespace track;
 #define KWD_LENGTH            "GNGT_MAX_LENGTH"
 #define KWD_EPOCHS            "GNGT_EPOCHS_PER_FRAME"
 #define KWD_PEN_THICKNESS     "PEN_THICKNESS"
-#define KWD_MARGINS           "MARGINS"
 #define KWD_MORPH             "MORPHOMATH"
 
 /*-----------------------------------------------------------------------------------------*/
@@ -44,11 +38,6 @@ int track::param_buffer_detection_port;
 bool track::param_buffer_detection_jpg;
 int track::param_detection_jpeg_quality;
 bool track::param_display_detection;
-double track::param_color_min_norm2;
-double track::param_color_min_norm2_margin;
-double track::param_color_min_cosine;
-int track::param_nb_background_samples;
-double track::param_background_coef;
 double track::param_gngt_target;
 double track::param_gngt_first_learning_rate;
 double track::param_gngt_second_learning_rate;
@@ -57,10 +46,6 @@ double track::param_gngt_variance_max;
 double track::param_gngt_length_max;
 int track::param_nb_epochs_per_frame;
 int track::param_pen_thickness;
-int track::param_left_margin;
-int track::param_right_margin;
-int track::param_top_margin;
-int track::param_bottom_margin;
 bool track::param_morph;
 int track::param_morph_radius;
 
@@ -70,7 +55,6 @@ ServerConnection* track::serverConn;
 /* set default parameters                                                                  */
 /*-----------------------------------------------------------------------------------------*/
 void track::ParameterParser::loadDefaultParameters() {
-	param_nb_background_samples = 10;
 	param_buffer_in_hostname = "localhost";
 	param_buffer_in_resource = "JPEG-RESOURCE";
 	param_buffer_in_entity = "video-buf";
@@ -89,10 +73,6 @@ void track::ParameterParser::loadDefaultParameters() {
 	param_buffer_detection_jpg = true;
 	param_detection_jpeg_quality = 70;
 	param_display_detection = false;
-	param_color_min_norm2 = 7000;
-	param_color_min_norm2_margin = 100;
-	param_color_min_cosine = .997;
-	param_background_coef = .0005;
 	param_gngt_target = 30;
 	param_gngt_first_learning_rate = .05;
 	param_gngt_second_learning_rate = .005;
@@ -101,10 +81,6 @@ void track::ParameterParser::loadDefaultParameters() {
 	param_gngt_length_max = 20;
 	param_nb_epochs_per_frame = 10;
 	param_pen_thickness = 3;
-	param_top_margin = 5;
-	param_bottom_margin = 5;
-	param_left_margin = 5;
-	param_right_margin = 5;
 	param_morph = false;
 	param_morph_radius = 3;
 }
@@ -141,11 +117,7 @@ track::ParameterParser::ParameterParser(const std::string& filename) {
 			std::getline(file, comment, '\n');
 		else {
 			file >> kwd;
-			if (kwd == KWD_BACKGROUND_SAMPLE)
-				file >> param_nb_background_samples;
-			else if (kwd == KWD_BACKGROUND_COEF)
-				file >> param_background_coef;
-			else if (kwd == KWD_BUFFER_IN) {
+			if (kwd == KWD_BUFFER_IN) {
 				file >> param_buffer_in_hostname >> param_buffer_in_port
 						>> param_buffer_in_resource >> param_buffer_in_entity
 						>> mode;
@@ -172,12 +144,6 @@ track::ParameterParser::ParameterParser(const std::string& filename) {
 				file >> param_detection_jpeg_quality;
 			else if (kwd == KWD_DISPLAY_DETECTION)
 				param_display_detection = true;
-			else if (kwd == KWD_COS)
-				file >> param_color_min_cosine;
-			else if (kwd == KWD_NORM_MARGIN)
-				file >> param_color_min_norm2_margin;
-			else if (kwd == KWD_NORM)
-				file >> param_color_min_norm2;
 			else if (kwd == KWD_TARGET)
 				file >> param_gngt_target;
 			else if (kwd == KWD_AGE)
@@ -193,9 +159,7 @@ track::ParameterParser::ParameterParser(const std::string& filename) {
 				file >> param_nb_epochs_per_frame;
 			else if (kwd == KWD_PEN_THICKNESS) {
 				file >> param_pen_thickness;
-			} else if (kwd == KWD_MARGINS)
-				file >> param_left_margin >> param_right_margin
-						>> param_top_margin >> param_bottom_margin;
+			}
 			else if (kwd == KWD_MORPH) {
 				param_morph = true;
 				file >> param_morph_radius;
@@ -233,17 +197,6 @@ void track::ParameterParser::saveParameters(const std::string& filename) {
 			<< "#                                    #" << std::endl
 			<< "######################################" << std::endl
 			<< std::endl
-			<< "# Margins of the computation area from sides : left, right, top and bottom."
-			<< std::endl << KWD_MARGINS << ' ' << param_left_margin << ' '
-			<< param_right_margin << ' ' << param_top_margin << ' '
-			<< param_bottom_margin << std::endl << std::endl
-			<< "# Number of sample frames for background initialization."
-			<< std::endl << KWD_BACKGROUND_SAMPLE << ' '
-			<< param_nb_background_samples << std::endl
-			<< "# Background updating low-pass filter coefficient."
-			<< std::endl << KWD_BACKGROUND_COEF << ' ' << param_background_coef
-			<< std::endl << std::endl << "# Interframe grabbing delay (ms)."
-			<< std::endl << std::endl
 			<< "# Input and output. Order is host, port, resource, entity, mode (JPEG | IMG)."
 			<< std::endl << KWD_BUFFER_IN << ' ' << param_buffer_in_hostname
 			<< ' ' << param_buffer_in_port << ' ' << param_buffer_in_resource
@@ -268,12 +221,6 @@ void track::ParameterParser::saveParameters(const std::string& filename) {
 			<< param_buffer_detection_entity << ' ' << Mode(
 			param_buffer_detection_jpg) << std::endl << KWD_QUALITY_DETECTION
 			<< ' ' << param_detection_jpeg_quality << std::endl << std::endl
-			<< "# Color comparison : minimal square norm, its tolerance,"
-			<< std::endl << "# and the minimal cosine." << std::endl
-			<< KWD_NORM << ' ' << param_color_min_norm2 << std::endl
-			<< KWD_NORM_MARGIN << ' ' << param_color_min_norm2_margin
-			<< std::endl << KWD_COS << ' ' << param_color_min_cosine
-			<< std::endl << std::endl
 			<< "# GNG-T Parameters : target, maximum edge age," << std::endl
 			<< "# winner and second learning rates." << std::endl << KWD_TARGET
 			<< ' ' << param_gngt_target << std::endl << KWD_AGE << ' '
@@ -424,7 +371,6 @@ void track::ServerConnection::postImg(ImageRGB24& outFrame) {
 			(unsigned char*) (&(*outFrame.begin())));
 	dest.resize(outFrame._dimension[0], outFrame._dimension[1],
 			bkbd::Image::RGB24);
-	dest.data = (unsigned char*) (&(*outFrame.begin()));
 
 	if (param_buffer_out_jpg) {
 		compressor.setOutputStream(outJpegBuf.ojpeg());

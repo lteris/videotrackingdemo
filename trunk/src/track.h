@@ -30,6 +30,7 @@ namespace track {
 	extern int param_buffer_out_port;
 	extern bool param_buffer_out_jpg;
 	extern int param_out_jpeg_quality;
+
 	extern std::string param_buffer_detection_hostname;
 	extern std::string param_buffer_detection_resource;
 	extern std::string param_buffer_detection_entity;
@@ -37,11 +38,7 @@ namespace track {
 	extern bool param_buffer_detection_jpg;
 	extern int param_detection_jpeg_quality;
 	extern bool param_display_detection;
-	extern double param_color_min_norm2;
-	extern double param_color_min_norm2_margin;
-	extern double param_color_min_cosine;
-	extern int param_nb_background_samples;
-	extern double param_background_coef;
+
 	extern double param_gngt_target;
 	extern double param_gngt_first_learning_rate;
 	extern double param_gngt_second_learning_rate;
@@ -50,10 +47,7 @@ namespace track {
 	extern double param_gngt_length_max;
 	extern int param_nb_epochs_per_frame;
 	extern int param_pen_thickness;
-	extern int param_left_margin;
-	extern int param_right_margin;
-	extern int param_top_margin;
-	extern int param_bottom_margin;
+
 	extern bool param_morph;
 	extern int param_morph_radius;
 
