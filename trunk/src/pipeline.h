@@ -3,27 +3,18 @@
 
 #include <iostream>
 #include <iomanip>
-#include <fstream>
 #include <cstdlib>
 #include <string>
-#include <mirage.h>
-#include <bkbd.h>
 #include <cc++/thread.h>
-#include <vq.h>
-#include <gngtlib.h>
-#include <vector>
-#include <algorithm>
-#include <map>
-#include <string>
 #include <queue>
 
 namespace pipeline {
 #define MAX_FRAMES_IN_PIPE 100000	/* the sequence number counter resets at this number */
 
-	/*-----------------------------------------------------------------------------------------*/
-	/* container for images passed between frames                                              */
-	/* CONTENT_TYPE needs to implement the = operator										   */
-	/*-----------------------------------------------------------------------------------------*/
+	/**
+	 * @short container for images passed between frames
+	 * CONTENT_TYPE needs to implement the = operator
+	 */
 	template<typename CONTENT_TYPE>
 	class Queueable {
 		public:
@@ -46,37 +37,43 @@ namespace pipeline {
 			}
 	};
 
-	/*-----------------------------------------------------------------------------------------*/
-	/* helper classes for the GenericStage                                                     */
-	/*-----------------------------------------------------------------------------------------*/
+	/**
+	 * @short position of stage in pipe
+	 */
 	enum {
 		FIRST, LAST, MIDDLE
 	};
 
-	class NullType {
-	};
-
+	/**
+	 * @short dummy type to generate 2 types based on type parameters
+	 */
 	template<bool flag> class DummyType {
 			enum {
 				val = flag
 			};
 	};
 
-	/*-----------------------------------------------------------------------------------------*/
-	/* type comparison classes                                                                 */
-	/*-----------------------------------------------------------------------------------------*/
+	/**
+	 * @short type comparison classes - true class
+	 */
 	struct TrueType {
 			enum {
 				value = true
 			};
 	};
 
+	/**
+	 * @short type comparison classes - false class
+	 */
 	struct FalseType {
 			enum {
 				value = false
 			};
 	};
 
+	/**
+	 * @short type comparison class
+	 */
 	template<typename T1, typename T2>
 	struct SameType {
 			typedef FalseType value;
@@ -87,14 +84,18 @@ namespace pipeline {
 			typedef TrueType value;
 	};
 
-	/* empty list type */
+	/**
+	 * @short empty type list
+	 */
 	struct NullList {
 			enum {
 				length = 0
 			};
 	};
 
-	/* all the information needed for a stage in the pipeline */
+	/**
+	 * @short all the information needed for a stage in the pipeline
+	 */
 	template<typename OUT_FRAME, typename COMPUTATION, int Q_FROM = 0>
 	struct Types4Stage {
 			typedef OUT_FRAME out_frame_type;
@@ -104,16 +105,13 @@ namespace pipeline {
 			};
 	};
 
-	/*-----------------------------------------------------------------------------------------*/
-	/* generic interface for a stage in the pipeline                                           */
-	/* IN_OUT_BUFFERS = some stages may not need either input (front & back) buffers or output */
-	/* buffer                                                                        		   */
-	/* NEXT_STAGE = has to be derived from the GenericStage base class						   */
-	/* Q_TYPE = type for the elements stored in the queue 									   */
-	/* COMPUTE = class that overloads the () operator for the parameters                       */
-	/* compute(frontBuffer&, outBuffer&, queue.front)										   */
-	/*-----------------------------------------------------------------------------------------*/
-
+	/**
+	 * @short generic interface for a stage in the pipeline:
+	 * Q_TYPE = type for the elements stored in the queue
+	 * COMPUTE = class that overloads the () operator for the parameters
+	 * compute(IN_FRAME*, OUT_FRAME*&, Q_TYPE&) if a bypass queue is involved or
+	 * compute(IN_FRAME*, OUT_FRAME*&) if there is no incoming queue for that stage
+	 */
 	template<typename IN_FRAME, typename OUT_FRAME, typename NEXT_STAGE,
 			typename Q_TYPE, typename COMPUTATION, int POSITION_IN_PIPE =
 					MIDDLE>
@@ -364,9 +362,9 @@ namespace pipeline {
 			}
 	};
 
-	/*-----------------------------------------------------------------------------------------*/
-	/* the list of types provided to the pipe template                                         */
-	/*-----------------------------------------------------------------------------------------*/
+	/**
+	 * @short the list of types provided to the pipe template
+	 */
 	template<typename ELEM, typename NEXT = NullList>
 	class TypeList {
 		public:
@@ -377,9 +375,9 @@ namespace pipeline {
 			};
 	};
 
-	/*-----------------------------------------------------------------------------------------*/
-	/* number of elements in the type list                                                     */
-	/*-----------------------------------------------------------------------------------------*/
+	/**
+	 * @short number of elements in the type list
+	 */
 	template<typename LIST>
 	struct length {
 			enum {
@@ -387,39 +385,46 @@ namespace pipeline {
 			};
 	};
 
-	/*-----------------------------------------------------------------------------------------*/
-	/* classes used to iterate through the type list                                           */
-	/*-----------------------------------------------------------------------------------------*/
+	/**
+	 * @short class used to iterate through the type list
+	 */
 	template<typename LIST, int n>
 	class NthElem {
 		public:
 typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 		};
 
+		/**
+		 * @short class used to iterate through the type list
+		 */
 		template<typename LIST>
 		class NthElem<LIST, 0> {
 			public:
 			typedef typename LIST::val type_name;
 		};
 
-		/*-----------------------------------------------------------------------------------------*/
-		/* retrieve the q_type as the out_frame_type of the stage at the given offset              */
-		/*-----------------------------------------------------------------------------------------*/
+		/**
+		 * @short retrieve the q_type as the out_frame_type of the stage at the given offset
+		 */
 		template<typename LIST, int step, int q_from>
 		class GetQType {
 			public:
 			typedef typename NthElem<LIST, step - q_from>::type_name::out_frame_type q_type;
 		};
 
+		/**
+		 * @short retrieve the q_type as the out_frame_type of the stage at the given offset
+		 */
 		template<typename LIST, int step>
 		class GetQType<LIST, step, 0> {
 			public:
 			typedef NullList q_type;
 		};
 
-		/*-----------------------------------------------------------------------------------------*/
-		/* classes used to build instances of the stages in the pipeline and the links between them */
-		/*-----------------------------------------------------------------------------------------*/
+		/**
+		 * @short classes used to build instances of the stages in the pipeline and the links between them:
+		 * interface for a node in the pipeline
+		 */
 		class NodeBase {
 			public:
 			void* nextNode; /* next node in the PipeNode list (the list used when building the pipe) */
@@ -433,6 +438,9 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 			virtual void join()=0;
 		};
 
+		/**
+		 * @short classes used to build instances of the stages in the pipeline and the links between them
+		 */
 		template<typename LIST, int n, int step, typename NEXT_STAGE>
 		class PipeNodes: public NodeBase {
 			public:
@@ -470,7 +478,10 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 			}
 		};
 
-		/* first stage in the pipeline */
+		/**
+		 * @short classes used to build instances of the stages in the pipeline and the links between them:
+		 * first stage in the pipeline
+		 */
 		template<typename LIST, int n, typename NEXT_STAGE>
 		class PipeNodes<LIST, n, 1, NEXT_STAGE> : public NodeBase {
 			public:
@@ -509,7 +520,10 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 			}
 		};
 
-		/* last stage in the pipe */
+		/**
+		 * @short classes used to build instances of the stages in the pipeline and the links between them:
+		 * last stage in the pipeline
+		 */
 		template<typename LIST, int step>
 		class PipeNodes<LIST, 0, step, NullList> : public NodeBase {
 			public:
@@ -546,9 +560,9 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 			}
 		};
 
-		/*-----------------------------------------------------------------------------------------*/
-		/* builds the nodes in the pipeline and the links between the stages                       */
-		/*-----------------------------------------------------------------------------------------*/
+		/**
+		 * @short builds the nodes in the pipeline and the links between the stages
+		 */
 		template<typename LIST>
 		class Pipe {
 			private:
@@ -556,6 +570,9 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 			pipeNodes;
 
 			public:
+			/**
+			 * @short class constructor
+			 */
 			Pipe() {
 				/* set the sources for the bypass queues */
 				NodeBase* crt = &pipeNodes;
@@ -572,7 +589,7 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 				}
 			}
 
-			/* start all the stages in the pipeline */
+			/** @short start all the stages in the pipeline */
 			void start() {
 				NodeBase* crt = &pipeNodes;
 				while (crt->nextNode != NULL) {
@@ -582,6 +599,7 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 				crt->start();
 			}
 
+			/** @short stop all the stages in the pipeline */
 			void stop() {
 				NodeBase* crt = &pipeNodes;
 				while (crt->nextNode != NULL) {
@@ -591,7 +609,7 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 				crt->stop();
 			}
 
-			/* wait for the threads to stop */
+			/** @short wait for the threads to stop */
 			void join() {
 				NodeBase* crt = &pipeNodes;
 				while (crt->nextNode != NULL) {
