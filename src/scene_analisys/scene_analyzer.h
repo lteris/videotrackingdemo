@@ -96,6 +96,15 @@ class NodeDistance {
 		}
 };
 
+class CoordinateDistance {
+	public:
+		mirage::img::Coordinate A, B;
+		int operator()(const mirage::img::Coordinate& A,
+				const mirage::img::Coordinate& B) {
+			return abs(A[0] - B[0]) + abs(A[1] - B[1]);
+		}
+};
+
 /** compute similarity between two given graphs wrt the given match */
 template<typename CCOMPONENT>
 class SimFunction {
@@ -326,7 +335,7 @@ class RTABUMatch {
 		}
 
 		/** find best local minimum with respect to the similarity functor*/
-		void greedyMatch(const CCOMPONENT& graph, Assignment& assig) {
+		void greedyMatch(Assignment& assig) {
 			/* for every node in the model find the closest matching one in the graph */
 			mirage::img::Coordinate M, G;
 
@@ -335,7 +344,17 @@ class RTABUMatch {
 			int dist = abs(A[0] - B[0]) + abs(A[1] - B[1]);
 
 			for (int i = 0; i < modelCoordinates.size(); i++) {
-
+				int min = CoordinateDistance(modelCoordinate[i],
+						graphCoordinate[0]);
+				int minIdx = 0;
+				for (int j = 1; j < graphCoordinates.size(); j++) {
+					int d;
+					if((d=CoordinateDistance(modelCoordinate[i], graphCoordinate[j]))<min){
+						min = d;
+						minIdx = j;
+					}
+				}
+				assig.makeMove(i, minIdx);
 			}
 
 		}
