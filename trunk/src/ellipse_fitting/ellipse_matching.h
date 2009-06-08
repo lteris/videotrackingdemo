@@ -16,8 +16,8 @@ class PointDelta {
 	public:
 		double operator()(const double cm, const double cn, const double el_a,
 				const double el_b, const int px, const int py) {
-			double error = el_b * el_b * (cm - px) * (cm - px) + el_a * el_a
-					* ((cn - py) * (cn - py) - el_b * el_b);
+			double error = (cm - px) * (cm - px) / (el_a * el_a) + (cn - py)
+					* (cn - py) / (el_b * el_b) - 1;
 			return fabs(error);
 		}
 };
@@ -55,15 +55,28 @@ class PointGradient {
 		/* update the ellipse parameters according to the gradient computed in point (px, py) */
 		void operator()(double& ma, double& mb, double& mcx, double& mcy, int px,
 				int py) {
+			double error = (el_cx - px) * (el_cx - px) / (el_a * el_a) + (el_cy - py)
+								* (el_cy - py) / (el_b * el_b) - 1;
+
+			double term_abs;
+			if(error > 0){
+				term_abs = 1;
+			}else if(error < 0){
+				term_abs = -1;
+			}else{
+				ma = 0;
+				mb = 0;
+				mcx = 0;
+				mcy = 0;
+				return;
+			}
 			double mx2 = (el_cx - px) * (el_cx - px);
 			double ny2 = (el_cy - py) * (el_cy - py);
-			double num = el_b * el_b * mx2 + el_a * el_a * (ny2 - el_b * el_b);
-			double num_abs = fabs(num);
 
-			ma = 2 * el_a * num * (-el_b * el_b + ny2) / num_abs;
-			mb = 2 * el_b * num * (-el_a * el_a + mx2) / num_abs;
-			mcx = 2 * el_b * el_b * (el_cx - px) * num / num_abs;
-			mcy = 2 * el_a * el_a * (el_cy - py) * num / num_abs;
+			ma = -2 * mx2 / (el_a * el_a * el_a * term_abs);
+			mb = -2 * ny2 / (el_b * el_b * el_b * term_abs);
+			mcx = 2 * (el_cx - px) / (el_a * el_a * term_abs);
+			mcy = 2 * (el_cy - py) / (el_b * el_b * term_abs);
 		}
 };
 
@@ -81,12 +94,12 @@ class EllipseMatch {
 		void initialMatch(const GRAPH& graph, double& xc, double& yc,
 				double& el_a, double& el_b) {
 
-			//			5250 3975 2112 2112
+
 
 			xc = 5250;
-			yc = 3975;
-			el_a = 20;//2112;
-			el_b = 20;//2112;
+			yc = 3825;
+			el_a = 375;
+			el_b = 375;
 			//			minCircle(graph, xc, yc, el_a);
 			//			el_b = el_a;
 		}
@@ -121,11 +134,14 @@ class EllipseMatch {
 				double mcy;
 				pointGradient(ma, mb, mcx, mcy, (*it)->value[0],
 						(*it)->value[1]);
+
 				grad_a += ma;
 				grad_b += mb;
 				grad_xc += mcx;
 				grad_yc += mcy;
 			}
+			std::cout << "gradient " << grad_a << " " << grad_b << " "
+					<< grad_xc << " " << grad_yc << "\n";
 
 		}
 
