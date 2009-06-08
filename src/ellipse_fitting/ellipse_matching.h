@@ -14,13 +14,11 @@
 /* the offset of the point from the expected track on the ellipse */
 class PointDelta {
 	public:
-		double operator()(const double& cx, const double& cy, const double& el_a,
-				const double& el_b, const int& px, const int& py) {
-			double dx2 = (cx - px) * (cx - px);
-			double dy2 = (cy - py) * (cy - py);
-			double delta = dx2 + dy2 - el_a * el_a * el_b * el_b * (dx2 + dy2)
-					/ (el_b * el_b * dx2 + el_a * el_a * dy2);
-			return delta * delta;
+		double operator()(const double cm, const double cn, const double el_a,
+				const double el_b, const int px, const int py) {
+			double error = el_b * el_b * (cm - px) * (cm - px) + el_a * el_a
+					* ((cn - py) * (cn - py) - el_b * el_b);
+			return fabs(error);
 		}
 };
 
@@ -57,32 +55,15 @@ class PointGradient {
 		/* update the ellipse parameters according to the gradient computed in point (px, py) */
 		void operator()(double& ma, double& mb, double& mcx, double& mcy, int px,
 				int py) {
-			double dx2 = (px - el_cx) * (px - el_cx);
-			double dy2 = (py - el_cy) * (py - el_cy);
-			double sum_dx2dy2 = dx2 + dy2;
-			double sum_dx2dy2_2 = (dx2 + dy2) * (dx2 + dy2);
-			double num = el_b * el_b * dx2 + el_a * el_a * dy2;
-			double num_3 = num * num * num;
-			double sum_b2dx2_a2dy2 = el_b2 * dx2 + el_a2 * dy2;
+			double mx2 = (el_cx - px) * (el_cx - px);
+			double ny2 = (el_cy - py) * (el_cy - py);
+			double num = el_b * el_b * mx2 + el_a * el_a * (ny2 - el_b * el_b);
+			double num_abs = fabs(num);
 
-			if (num != 0) {
-				ma = -4 * el_a * el_b4 * dx2 * (el_b2 * dx2 + el_a2 * (-el_b2
-						+ dy2)) * sum_dx2dy2_2 / num_3;
-				mb = -4 * el_b * el_a4 * (el_b2 * dx2 + el_a2 * (-el_b2 + dy2))
-						* sum_dx2dy2_2 * dy2 / num_3;
-				mcx = 4 * (el_cx - px) * (dx2 - a2_b2 * (dx2 + dy2)
-						/ sum_b2dx2_a2dy2 + dy2) * (1 - a2_b2 * dif_a2_b2 * dy2
-						/ (num * num));
-				mcy = 4 * (1 + a2_b2 * dif_a2_b2 * dx2 / (sum_b2dx2_a2dy2
-						* sum_b2dx2_a2dy2)) * (dx2 - el_a2 * el_b2 * sum_dx2dy2
-						/ sum_b2dx2_a2dy2 + dy2) * (el_cy - py);
-			} else {
-				ma = 0;
-				mb = 0;
-				mcx = 0;
-				mcy = 0;
-			}
-
+			ma = 2 * el_a * num * (-el_b * el_b + ny2) / num_abs;
+			mb = 2 * el_b * num * (-el_a * el_a + mx2) / num_abs;
+			mcx = 2 * el_b * el_b * (el_cx - px) * num / num_abs;
+			mcy = 2 * el_a * el_a * (el_cy - py) * num / num_abs;
 		}
 };
 
@@ -100,14 +81,14 @@ class EllipseMatch {
 		void initialMatch(const GRAPH& graph, double& xc, double& yc,
 				double& el_a, double& el_b) {
 
-//			xc = 5625;
-//			yc = 4050;
-//			el_a = 1350;
-//			el_b = 1350;
-//			return;
+			//			5250 3975 2112 2112
 
-			minCircle(graph, xc, yc, el_a);
-			el_b = el_a;
+			xc = 5250;
+			yc = 3975;
+			el_a = 20;//2112;
+			el_b = 20;//2112;
+			//			minCircle(graph, xc, yc, el_a);
+			//			el_b = el_a;
 		}
 
 		/** get the cost of the current configuration */
@@ -181,7 +162,7 @@ class EllipseMatch {
 
 				double ccost = cost(graph, xc, yc, el_a, el_b);
 				std::cout << "cost " << ccost << "\n";
-				if (fabs(ccost - crtCost) <= tolerance) {
+				if (ccost > crtCost) {
 					return ccost;
 				}
 				crtCost = ccost;
