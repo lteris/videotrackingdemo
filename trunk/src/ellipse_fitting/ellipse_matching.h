@@ -4,27 +4,21 @@
 
 template<typename T>
 class Vector2D {
-		T** vec;
+		T* vec;
 		int l;
 		int c;
 	public:
 		Vector2D(int lin, int col) {
-			vec = new T*[lin];
-			for (int i = 0; i < lin; i++) {
-				vec[i] = new T[col];
-			}
+			vec = new T[lin * col];
 			this->l = lin;
 			this->c = col;
 		}
 		virtual ~Vector2D() {
-			for (int i = 0; i < l; i++) {
-				delete[] vec[i];
-			}
 			delete[] vec;
 		}
 
 		T& operator()(int lin, int col) {
-			return vec[lin][col];
+			return vec[lin * c + col];
 		}
 };
 
@@ -75,8 +69,8 @@ class CurvePanel {
 			int j, iq, ip, i;
 			double tresh, theta, tau, t, sm, s, h, g, c;
 
-			double b[n + 1];
-			double z[n + 1];
+			double b[n];
+			double z[n];
 
 			for (ip = 0; ip < n; ip++) {
 				for (iq = 0; iq < n; iq++)
@@ -156,7 +150,7 @@ class CurvePanel {
 		void choldc(Vector2D<double>& a, int n, Vector2D<double>& l) {
 			int i, j, k;
 			double sum;
-			double p[n + 1];
+			double p[n];
 
 			for (i = 0; i < n; i++) {
 				for (j = i; j < n; j++) {
@@ -189,9 +183,9 @@ class CurvePanel {
 			double D, temp;
 			double maxpivot;
 			int npivot;
-			Vector2D<double> B(N + 1, N + 2);
-			Vector2D<double> A(N + 1, 2 * N + 2);
-			Vector2D<double> C(N + 1, N + 1);
+			Vector2D<double> B(N, N + 1);
+			Vector2D<double> A(N, 2 * N + 1);
+			Vector2D<double> C(N, N);
 			double eps = 10e-20;
 
 			for (k = 0; k < N; k++)
@@ -276,22 +270,22 @@ class CurvePanel {
 	public:
 		void operator()(double& xc, double& yc, double& el_a, double& el_b) {
 			int np = points.size(); // number of points
-			Vector2D<double> D(np + 1, 6);
-			Vector2D<double> S(6, 6);
-			Vector2D<double> Const(6, 6);
-			Vector2D<double> temp(6, 6);
-			Vector2D<double> L(6, 6);
-			Vector2D<double> C(6, 6);
+			Vector2D<double> D(np, 5);
+			Vector2D<double> S(5, 5);
+			Vector2D<double> Const(5, 5);
+			Vector2D<double> temp(5, 5);
+			Vector2D<double> L(5, 5);
+			Vector2D<double> C(5, 5);
 
-			Vector2D<double> invL(6, 6);
-			double d[6];
-			Vector2D<double> V(6, 6);
-			Vector2D<double> sol(6, 6);
+			Vector2D<double> invL(5, 5);
+			double d[5];
+			Vector2D<double> V(5, 5);
+			Vector2D<double> sol(5, 5);
 			double tx, ty;
 			int nrot = 0;
 			int npts = 50;
 
-			Vector2D<double> XY(3, npts + 1);
+			Vector2D<double> XY(2, npts);
 			double pvec[6];
 
 			Const(0, 1) = -2;
@@ -304,7 +298,7 @@ class CurvePanel {
 			for (int i = 0; i < np; i++) {
 				tx = points[i].x;
 				ty = points[i].y;
-				std::cout << tx << " " << ty << "\n";
+
 				D(i, 0) = tx * tx;
 				D(i, 1) = ty * ty;
 				D(i, 2) = tx;
