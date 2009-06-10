@@ -6,23 +6,11 @@ typedef vq::Vector<2, double> Coordinate;
 typedef vq::Graph<Coordinate, int> Graph;
 
 int main(int argc, char** argv) {
-	int iter;
 
-	sscanf(argv[2], "%d", &iter);
+	CurvePanel cp;
 
-	EllipseMatch<Graph, PointGradient, PointDelta> em(0.0000000001, 1, iter);
-
-	Graph model;
 	Coordinate x;
 	double xc, yc, el_a, el_b;
-
-	x[0] = 1;
-	x[1] = 5;
-	model.New(x);
-
-	x[0] = 3;
-	x[1] = 6;
-	model.New(x);
 
 	std::ifstream file;
 	std::string comment;
@@ -40,11 +28,11 @@ int main(int argc, char** argv) {
 	}
 	while (!file.eof()) {
 		file >> x[0] >> x[1];
-		model.New(x);
+		cp.addPoint(x[0], x[1]);
 	}
 	file.close();
 
-	em(model, xc, yc, el_a, el_b);
+	cp(xc, yc, el_a, el_b);
 
 	std::ofstream ofile;
 	std::string fn;
@@ -53,16 +41,23 @@ int main(int argc, char** argv) {
 	ofile.open(fn.c_str());
 
 	file.open(argv[1]);
+
 	while (!file.eof()) {
 		std::getline(file, comment, '\n');
 		ofile << comment << "\n";
 	}
-	file.close();
+
 	ofile << "1 3 0 1 0 7 50 -1 -1 0.000 1 0.0000 ";
 	ofile << (int) xc << " " << (int) yc << " " << (int) el_a << " "
 			<< (int) el_b << " 0 0 0 0\n";
 
-	file.close();
+
 	ofile.close();
+
+
+
+	//file.close();
+
+
 }
 
