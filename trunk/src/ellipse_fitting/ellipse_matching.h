@@ -17,7 +17,10 @@ class Vector2D {
 			this->c = col;
 		}
 		virtual ~Vector2D() {
-			//			delete[] vec;
+			for (int i = 0; i < l; i++) {
+				delete[] vec[i];
+			}
+			delete[] vec;
 		}
 
 		T& operator()(int lin, int col) {
@@ -296,7 +299,6 @@ class CurvePanel {
 			Vector2D<double> XY(3, npts + 1);
 			double pvec[6];
 
-			// System.out.println("FPF mode");
 			Const(1, 2) = -2;
 			Const(2, 1) = -2;
 
@@ -307,8 +309,6 @@ class CurvePanel {
 			for (int i = 1; i <= np; i++) {
 				tx = points[i - 1].x;
 				ty = points[i - 1].y;
-
-				std::cout << tx << " " << ty << "\n";
 
 				D(i, 1) = tx * tx;
 				D(i, 2) = ty * ty;
@@ -340,7 +340,6 @@ class CurvePanel {
 			}
 
 			double zero = 10e-20;
-			double minev = 10e+20;
 			int solind = 0;
 
 			for (int i = 1; i <= 5; i++)
