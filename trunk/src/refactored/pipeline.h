@@ -10,12 +10,12 @@
  *   modify it under the terms of the GNU Lesser General Public
  *   License as published by the Free Software Foundation; either
  *   version 2.1 of the License, or any later version.
- *   
+ *
  *   This library is distributed in the hope that it will be useful,
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  *   Lesser General Public License for more details.
- *   
+ *
  *   You should have received a copy of the GNU Lesser General Public
  *   License along with this library; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
@@ -23,7 +23,6 @@
  *   Contact : Herve.Frezza-Buet@supelec.fr
  *
  */
-
 
 #ifndef PIPELINE_H_
 #define PIPELINE_H_
@@ -61,6 +60,35 @@ namespace pipeline {
 			Queueable& operator=(const Queueable& cont) {
 				this->seqNo = cont.seqNo;
 				this->data = cont.data;
+			}
+	};
+
+	template<typename T>
+	class SyncQ {
+			std::queue<T> q;
+			ost::Mutex qMutex;
+
+		public:
+			SyncQ() {
+			}
+
+			void push(T& val) {
+				qMutex.enter();
+				q.push(val);
+				qMutex.leave();
+			}
+
+			T& front() {
+				qMutex.enter();
+				T& val = q.front();
+				qMutex.leave();
+				return val;
+			}
+
+			void pop() {
+				qMutex.enter();
+				q.pop();
+				qMutex.leave();
 			}
 	};
 
@@ -122,8 +150,8 @@ namespace pipeline {
 
 	/**
 	 * @short all the information needed for a stage in the pipeline: the type of the output, the class that implements the () operator
-	 * as required by the GeneralStage class and the number of the stage that holds the writing end of the queue that goes in the 
-         * current stage (if any)
+	 * as required by the GeneralStage class and the number of the stage that holds the writing end of the queue that goes in the
+	 * current stage (if any)
 	 * OUT_FRAME must implement operator=(const OUT_FRAME&)
 	 */
 	template<typename OUT_FRAME, typename COMPUTATION, int Q_FROM = 0>
@@ -155,8 +183,8 @@ namespace pipeline {
 
 			COMPUTATION compute; /* functor */
 
-			std::queue<Queueable<Q_TYPE> >* readBpQueue; /*bypass queue the stage reads from (if any) */
-			std::queue<Queueable<OUT_FRAME> >* writeBpQueue; /*bypass queue the stage writes to (if any) */
+			SyncQ<Queueable<Q_TYPE> >* readBpQueue; /*bypass queue the stage reads from (if any) */
+			SyncQ<Queueable<OUT_FRAME> >* writeBpQueue; /*bypass queue the stage writes to (if any) */
 
 			/* synchronization vars */
 			bool wait4Input; /* thread blocked waiting on input */
@@ -238,7 +266,7 @@ namespace pipeline {
 				if (SameType<Q_TYPE, NullList>::value::value) {
 					readBpQueue = NULL;
 				} else {
-					readBpQueue = new std::queue<Queueable<Q_TYPE> >();
+					readBpQueue = new SyncQ<Queueable<Q_TYPE> >();
 				}
 				writeBpQueue = NULL;
 
@@ -262,7 +290,7 @@ namespace pipeline {
 				if (SameType<Q_TYPE, NullList>::value::value) {
 					readBpQueue = NULL;
 				} else {
-					readBpQueue = new std::queue<Queueable<Q_TYPE> >();
+					readBpQueue = new SyncQ<Queueable<Q_TYPE> >();
 				}
 				writeBpQueue = NULL;
 
@@ -287,11 +315,11 @@ namespace pipeline {
 				this->next = next;
 			}
 
-			void setWriteQ(std::queue<Queueable<OUT_FRAME> >* writeBpQueue) {
+			void setWriteQ(SyncQ<Queueable<OUT_FRAME> >* writeBpQueue) {
 				this->writeBpQueue = writeBpQueue;
 			}
 
-			std::queue<Queueable<Q_TYPE> >* getReadQ() {
+			SyncQ<Queueable<Q_TYPE> >* getReadQ() {
 				return this->readBpQueue;
 			}
 
@@ -394,9 +422,6 @@ namespace pipeline {
 
 	/**
 	 * @short the list of types provided to the pipe template
-         *
-	* NEXT should fit TypeList<br>
-	* ELEM is the content
 	 */
 	template<typename ELEM, typename NEXT = NullList>
 	class TypeList {
@@ -495,7 +520,7 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 			}
 
 			void setWriteQ(void* writeQ) {
-				value.setWriteQ((std::queue<Queueable<typename stage_types::out_frame_type> >*)writeQ);
+				value.setWriteQ((SyncQ<Queueable<typename stage_types::out_frame_type> >*)writeQ);
 			}
 
 			void start() {
@@ -537,7 +562,7 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 			}
 
 			void setWriteQ(void* writeQ) {
-				value.setWriteQ((std::queue<Queueable<typename stage_types::out_frame_type> >*)writeQ);
+				value.setWriteQ((SyncQ<Queueable<typename stage_types::out_frame_type> >*)writeQ);
 			}
 
 			void start() {
@@ -577,7 +602,7 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 			}
 
 			void setWriteQ(void* writeQ) {
-				value.setWriteQ((std::queue<Queueable<typename stage_types::out_frame_type> >*)writeQ);
+				value.setWriteQ((SyncQ<Queueable<typename stage_types::out_frame_type> >*)writeQ);
 			}
 
 			void start() {
@@ -654,7 +679,9 @@ typedef			typename NthElem<typename LIST::next, n - 1>::type_name type_name;
 
 		};
 	}
-/**
-* @example pipeliner_example_00.cc */
+
+	/**
+	 * @example pipeliner_example_00.cc
+	 */
 
 #endif /* PIPELINE_H_ */
